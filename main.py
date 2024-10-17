@@ -113,18 +113,35 @@ clear_button.pack(side='left')
 # .data bölümündeki değişkenleri saklamak için sözlük
 data_section = {}
 
-# Register tablosunu güncelleme fonksiyonu
+# Register tablosunda bir register'ın değerini döndüren fonksiyon
+def get_register_value(register_name):
+    """Register'ın hexadecimal value değerini döndürür."""
+    for item in tree.get_children():
+        name = tree.item(item, 'values')[0]
+        if name == register_name:
+            return int(tree.item(item, 'values')[2], 16)  # Hex değeri integer olarak döndür
+
+# Register tablosunda bir register'ın value değerini güncelleyen fonksiyon
 def update_register_value(register_name, new_value):
     """Register tablosunda verilen register'ın value değerini günceller."""
     for item in tree.get_children():
         name = tree.item(item, 'values')[0]
         if name == register_name:
-            tree.set(item, column="Value", value=new_value)
+            hex_value = f"0x{new_value:08X}"  # Yeni değer hexadecimal formatta
+            tree.set(item, column="Value", value=hex_value)
 
 # Decimal değeri hexadecimal formata çeviren fonksiyon
 def to_hex(value):
     """Verilen değeri hexadecimal formata dönüştürür."""
     return f"0x{int(value):08X}"
+
+# ADD komutunu işleyen fonksiyon
+def execute_add_command(dest, src1, src2):
+    """ADD komutunu işler ve sonucu hedef register'a yazar."""
+    val1 = get_register_value(src1)  # Kaynak 1'in değeri
+    val2 = get_register_value(src2)  # Kaynak 2'nin değeri
+    result = val1 + val2  # Değerleri topla
+    update_register_value(dest, result)  # Sonucu hedef register'a yaz
 
 # MIPS kodunu parçalayan ve işleyen fonksiyon
 def read_mips_code():
@@ -149,27 +166,31 @@ def read_mips_code():
 
     console_output.insert('end', f"Data Section: {data_section}\n")
 
-    # Main içindeki değişkenleri bulup register değerlerini güncelleme
+    # Main içindeki komutları işleme
     in_main = False
     for line in lines:
         if line.startswith("main:"):
             in_main = True
             continue
-        if in_main and line.startswith("li"):  # li komutunu es geçiyoruz
-            continue
         if in_main:
             parts = [part.strip() for part in line.replace(",", " ").split()]
-            for part in parts:
-                if part in data_section:  # Değişken ismi bulundu
-                    register = parts[1]  # Örneğin lw $t0, num1 -> parts[1] = $t0
-                    new_value = data_section[part]  # Değişkenin değeri
-                    update_register_value(register, new_value)  # Register'ı güncelle
+            if parts[0] == "add":  # ADD komutunu bulduk
+                dest = parts[1]  # Hedef register
+                src1 = parts[2]  # Kaynak register 1
+                src2 = parts[3]  # Kaynak register 2
+                execute_add_command(dest, src1, src2)  # ADD komutunu işle
+            elif parts[0] == "lw":  # LW komutunu işleme
+                register = parts[1]
+                var_name = parts[2]
+                if var_name in data_section:
+                    update_register_value(register, int(data_section[var_name], 16))
 
     console_output.insert('end', f"Registers Updated.\n")
 
 # Konsol çerçevesine 'Run' butonu ekle
 run_button = tk.Button(console_frame, text="Run", command=read_mips_code)
 run_button.pack(side='left')
+
 
 
 
