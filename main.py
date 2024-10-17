@@ -115,10 +115,16 @@ data_section = {}
 
 # Register tablosunu güncelleme fonksiyonu
 def update_register_value(register_name, new_value):
+    """Register tablosunda verilen register'ın value değerini günceller."""
     for item in tree.get_children():
         name = tree.item(item, 'values')[0]
         if name == register_name:
             tree.set(item, column="Value", value=new_value)
+
+# Decimal değeri hexadecimal formata çeviren fonksiyon
+def to_hex(value):
+    """Verilen değeri hexadecimal formata dönüştürür."""
+    return f"0x{int(value):08X}"
 
 # MIPS kodunu parçalayan ve işleyen fonksiyon
 def read_mips_code():
@@ -138,7 +144,7 @@ def read_mips_code():
         if in_data_section:
             parts = line.replace(",", " ").split()
             var_name = parts[0].replace(":", "")
-            var_value = parts[-1]
+            var_value = to_hex(parts[-1])  # Değeri hexadecimal'e çevir
             data_section[var_name] = var_value  # Değişkeni sözlüğe kaydet
 
     console_output.insert('end', f"Data Section: {data_section}\n")
@@ -164,6 +170,7 @@ def read_mips_code():
 # Konsol çerçevesine 'Run' butonu ekle
 run_button = tk.Button(console_frame, text="Run", command=read_mips_code)
 run_button.pack(side='left')
+
 
 
 
