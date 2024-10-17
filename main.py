@@ -104,10 +104,29 @@ tree.pack(fill='both', expand=True)
 console_frame = tk.Frame(root, relief='solid', borderwidth=1)
 console_frame.place(x=0, y=450, width=900, height=250)
 
-console_output = tk.Text(console_frame, height=8, bg='white', fg='white')
+console_output = tk.Text(console_frame, height=8, bg='black', fg='white')
 console_output.pack(fill='both', expand=True)
 
 clear_button = tk.Button(console_frame, text="Clear", command=lambda: console_output.delete('1.0', 'end'))
 clear_button.pack(side='left')
+
+# MIPS kodunu parçalayan ve konsola yazdıran fonksiyon
+def read_mips_code():
+    console_output.delete('1.0', 'end')  # Önceki konsol çıktısını temizler
+    code = edit_text.get('1.0', 'end-1c')  # Düzenleme alanındaki tüm kodu al
+
+    # Satırları ayır ve trimle
+    lines = [line.strip() for line in code.split('\n') if line.strip()]  
+
+    # Her satırı parçalarına ayır ve konsola yazdır
+    for i, line in enumerate(lines, start=1):
+        parts = [part.strip() for part in line.replace(',', ' ').split()]  # Parçalama işlemi
+        console_output.insert('end', f"{i}: {parts}\n")  # Konsola satır numarasıyla yazdır
+
+# Konsol çerçevesine 'Run' butonu ekle
+run_button = tk.Button(console_frame, text="Run", command=read_mips_code)
+run_button.pack(side='left')
+
+
 
 root.mainloop()
