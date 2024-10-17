@@ -110,22 +110,61 @@ console_output.pack(fill='both', expand=True)
 clear_button = tk.Button(console_frame, text="Clear", command=lambda: console_output.delete('1.0', 'end'))
 clear_button.pack(side='left')
 
-# MIPS kodunu parçalayan ve konsola yazdıran fonksiyon
+# .data bölümündeki değişkenleri saklamak için sözlük
+data_section = {}
+
+# Register tablosunu güncelleme fonksiyonu
+def update_register_value(register_name, new_value):
+    for item in tree.get_children():
+        name = tree.item(item, 'values')[0]
+        if name == register_name:
+            tree.set(item, column="Value", value=new_value)
+
+# MIPS kodunu parçalayan ve işleyen fonksiyon
 def read_mips_code():
     console_output.delete('1.0', 'end')  # Önceki konsol çıktısını temizler
     code = edit_text.get('1.0', 'end-1c')  # Düzenleme alanındaki tüm kodu al
+    lines = [line.strip() for line in code.split('\n') if line.strip()]  # Satırları temizle
 
-    # Satırları ayır ve trimle
-    lines = [line.strip() for line in code.split('\n') if line.strip()]  
+    # .data bölümündeki değişkenleri toplama
+    in_data_section = False
+    for line in lines:
+        if line == ".data":
+            in_data_section = True
+            continue
+        elif line == ".text":
+            in_data_section = False
+            break
+        if in_data_section:
+            parts = line.replace(",", " ").split()
+            var_name = parts[0].replace(":", "")
+            var_value = parts[-1]
+            data_section[var_name] = var_value  # Değişkeni sözlüğe kaydet
 
-    # Her satırı parçalarına ayır ve konsola yazdır
-    for i, line in enumerate(lines, start=1):
-        parts = [part.strip() for part in line.replace(',', ' ').split()]  # Parçalama işlemi
-        console_output.insert('end', f"{i}: {parts}\n")  # Konsola satır numarasıyla yazdır
+    console_output.insert('end', f"Data Section: {data_section}\n")
+
+    # Main içindeki değişkenleri bulup register değerlerini güncelleme
+    in_main = False
+    for line in lines:
+        if line.startswith("main:"):
+            in_main = True
+            continue
+        if in_main and line.startswith("li"):  # li komutunu es geçiyoruz
+            continue
+        if in_main:
+            parts = [part.strip() for part in line.replace(",", " ").split()]
+            for part in parts:
+                if part in data_section:  # Değişken ismi bulundu
+                    register = parts[1]  # Örneğin lw $t0, num1 -> parts[1] = $t0
+                    new_value = data_section[part]  # Değişkenin değeri
+                    update_register_value(register, new_value)  # Register'ı güncelle
+
+    console_output.insert('end', f"Registers Updated.\n")
 
 # Konsol çerçevesine 'Run' butonu ekle
 run_button = tk.Button(console_frame, text="Run", command=read_mips_code)
 run_button.pack(side='left')
+
 
 
 
