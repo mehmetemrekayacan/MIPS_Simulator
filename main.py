@@ -143,6 +143,33 @@ def execute_add_command(dest, src1, src2):
     result = val1 + val2  # Değerleri topla
     update_register_value(dest, result)  # Sonucu hedef register'a yaz
 
+# SUB komutunu işleyen fonksiyon
+def execute_sub_command(dest, src1, src2):
+    """SUB komutunu işler ve sonucu hedef register'a yazar."""
+    val1 = get_register_value(src1)  # Kaynak 1'in değeri
+    val2 = get_register_value(src2)  # Kaynak 2'nin değeri
+    result = val1 - val2  # Çıkarma işlemi
+    update_register_value(dest, result)  # Sonucu hedef register'a yaz
+
+# DIV komutunu işleyen fonksiyon
+def execute_div_command(dest, src1, src2):
+    """DIV komutunu işler ve sonucu hedef register'a yazar."""
+    val1 = get_register_value(src1)  # Kaynak 1'in değeri
+    val2 = get_register_value(src2)  # Kaynak 2'nin değeri
+    if val2 != 0:  # Sıfıra bölmeyi kontrol et
+        result = val1 // val2  # Bölme işlemi
+        update_register_value(dest, result)  # Sonucu hedef register'a yaz
+    else:
+        console_output.insert('end', "Error: Division by zero!\n")
+
+# MUL komutunu işleyen fonksiyon
+def execute_mul_command(dest, src1, src2):
+    """MUL komutunu işler ve sonucu hedef register'a yazar."""
+    val1 = get_register_value(src1)  # Kaynak 1'in değeri
+    val2 = get_register_value(src2)  # Kaynak 2'nin değeri
+    result = val1 * val2  # Çarpma işlemi
+    update_register_value(dest, result)  # Sonucu hedef register'a yaz
+
 # MIPS kodunu parçalayan ve işleyen fonksiyon
 def read_mips_code():
     console_output.delete('1.0', 'end')  # Önceki konsol çıktısını temizler
@@ -175,13 +202,19 @@ def read_mips_code():
         if in_main:
             parts = [part.strip() for part in line.replace(",", " ").split()]
             if parts[0] == "add":  # ADD komutunu bulduk
-                dest = parts[1]  # Hedef register
-                src1 = parts[2]  # Kaynak register 1
-                src2 = parts[3]  # Kaynak register 2
-                execute_add_command(dest, src1, src2)  # ADD komutunu işle
-            elif parts[0] == "lw":  # LW komutunu işleme
-                register = parts[1]
-                var_name = parts[2]
+                dest, src1, src2 = parts[1], parts[2], parts[3]
+                execute_add_command(dest, src1, src2)
+            elif parts[0] == "sub":  # SUB komutunu bulduk
+                dest, src1, src2 = parts[1], parts[2], parts[3]
+                execute_sub_command(dest, src1, src2)
+            elif parts[0] == "div":  # DIV komutunu bulduk
+                dest, src1, src2 = parts[1], parts[2], parts[3]
+                execute_div_command(dest, src1, src2)
+            elif parts[0] == "mul":  # MUL komutunu bulduk
+                dest, src1, src2 = parts[1], parts[2], parts[3]
+                execute_mul_command(dest, src1, src2)
+            elif parts[0] == "lw":  # LW komutunu bulduk
+                register, var_name = parts[1], parts[2]
                 if var_name in data_section:
                     update_register_value(register, int(data_section[var_name], 16))
 
@@ -190,10 +223,5 @@ def read_mips_code():
 # Konsol çerçevesine 'Run' butonu ekle
 run_button = tk.Button(console_frame, text="Run", command=read_mips_code)
 run_button.pack(side='left')
-
-
-
-
-
 
 root.mainloop()
