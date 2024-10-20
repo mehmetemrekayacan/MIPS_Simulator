@@ -165,22 +165,26 @@ class MIPSIDE:
                 continue
             if in_main:
                 parts = [part.strip() for part in line.replace(",", " ").split()]
-                if parts[0] == "add":  # ADD komutunu bulduk
-                    dest, src1, src2 = parts[1], parts[2], parts[3]
-                    self.execute_add_command(dest, src1, src2)
-                elif parts[0] == "sub":  # SUB komutunu bulduk
-                    dest, src1, src2 = parts[1], parts[2], parts[3]
-                    self.execute_sub_command(dest, src1, src2)
-                elif parts[0] == "div":  # DIV komutunu bulduk
-                    dest, src1, src2 = parts[1], parts[2], parts[3]
-                    self.execute_div_command(dest, src1, src2)
-                elif parts[0] == "mul":  # MUL komutunu bulduk
-                    dest, src1, src2 = parts[1], parts[2], parts[3]
-                    self.execute_mul_command(dest, src1, src2)
-                elif parts[0] == "lw":  # LW komutunu bulduk
-                    register, var_name = parts[1], parts[2]
-                    if var_name in self.data_section:
-                        self.update_register_value(register, int(self.data_section[var_name], 16))
+                command = parts[0]
+                
+                match command:  # Match-case yapısı kullanılıyor
+                    case "add":
+                        dest, src1, src2 = parts[1], parts[2], parts[3]
+                        self.execute_add_command(dest, src1, src2)
+                    case "sub":
+                        dest, src1, src2 = parts[1], parts[2], parts[3]
+                        self.execute_sub_command(dest, src1, src2)
+                    case "div":
+                        dest, src1, src2 = parts[1], parts[2], parts[3]
+                        self.execute_div_command(dest, src1, src2)
+                    case "mul":
+                        dest, src1, src2 = parts[1], parts[2], parts[3]
+                        self.execute_mul_command(dest, src1, src2)
+                    case "lw":
+                        register, var_name = parts[1], parts[2]
+                        if var_name in self.data_section:
+                            self.update_register_value(register, int(self.data_section[var_name], 16))
+
 
         self.console_output.insert('end', f"Registers Updated.\n")
 
