@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from register_data import register
-
+from mips_commands import MIPSCommands
 
 class MIPSIDE:
     def __init__(self, root):
@@ -12,6 +12,8 @@ class MIPSIDE:
         self.data_section = {}  # .data bölümündeki değişkenleri saklamak için sözlük
         
         self.create_widgets()  # Arayüz bileşenlerini oluştur
+
+        self.commands = MIPSCommands(self.tree)  # Create an instance of MIPSCommands
 
     def create_widgets(self):
         # Sol üstteki düzenleme penceresi için bir Frame
@@ -85,55 +87,9 @@ class MIPSIDE:
         self.line_numbers.yview_scroll(-1 * (event.delta // 120), "units")
         return "break"
 
-    def get_register_value(self, register_name):
-        """Register'ın hexadecimal value değerini döndürür."""
-        for item in self.tree.get_children():
-            name = self.tree.item(item, 'values')[0]
-            if name == register_name:
-                return int(self.tree.item(item, 'values')[2], 16)  # Hex değeri integer olarak döndür
-
-    def update_register_value(self, register_name, new_value):
-        """Register tablosunda verilen register'ın value değerini günceller."""
-        for item in self.tree.get_children():
-            name = self.tree.item(item, 'values')[0]
-            if name == register_name:
-                hex_value = f"0x{new_value:08X}"  # Yeni değer hexadecimal formatta
-                self.tree.set(item, column="Value", value=hex_value)
-
     def to_hex(self, value):
         """Verilen değeri hexadecimal formata dönüştürür."""
         return f"0x{int(value):08X}"
-
-    def execute_add_command(self, dest, src1, src2):
-        """ADD komutunu işler ve sonucu hedef register'a yazar."""
-        val1 = self.get_register_value(src1)  # Kaynak 1'in değeri
-        val2 = self.get_register_value(src2)  # Kaynak 2'nin değeri
-        result = val1 + val2  # Değerleri topla
-        self.update_register_value(dest, result)  # Sonucu hedef register'a yaz
-
-    def execute_sub_command(self, dest, src1, src2):
-        """SUB komutunu işler ve sonucu hedef register'a yazar."""
-        val1 = self.get_register_value(src1)  # Kaynak 1'in değeri
-        val2 = self.get_register_value(src2)  # Kaynak 2'nin değeri
-        result = val1 - val2  # Çıkarma işlemi
-        self.update_register_value(dest, result)  # Sonucu hedef register'a yaz
-
-    def execute_div_command(self, dest, src1, src2):
-        """DIV komutunu işler ve sonucu hedef register'a yazar."""
-        val1 = self.get_register_value(src1)  # Kaynak 1'in değeri
-        val2 = self.get_register_value(src2)  # Kaynak 2'nin değeri
-        if val2 != 0:  # Sıfıra bölmeyi kontrol et
-            result = val1 // val2  # Bölme işlemi
-            self.update_register_value(dest, result)  # Sonucu hedef register'a yaz
-        else:
-            self.console_output.insert('end', "Error: Division by zero!\n")
-
-    def execute_mul_command(self, dest, src1, src2):
-        """MUL komutunu işler ve sonucu hedef register'a yazar."""
-        val1 = self.get_register_value(src1)  # Kaynak 1'in değeri
-        val2 = self.get_register_value(src2)  # Kaynak 2'nin değeri
-        result = val1 * val2  # Çarpma işlemi
-        self.update_register_value(dest, result)  # Sonucu hedef register'a yaz
 
     def read_mips_code(self):
         self.console_output.delete('1.0', 'end')  # Önceki konsol çıktısını temizler
@@ -166,28 +122,28 @@ class MIPSIDE:
             if in_main:
                 parts = [part.strip() for part in line.replace(",", " ").split()]
                 command = parts[0]
-                
+
                 match command:  # Match-case yapısı kullanılıyor
                     case "add":
                         dest, src1, src2 = parts[1], parts[2], parts[3]
-                        self.execute_add_command(dest, src1, src2)
+                        self.commands.execute_add_command(dest, src1, src2)
                     case "sub":
                         dest, src1, src2 = parts[1], parts[2], parts[3]
-                        self.execute_sub_command(dest, src1, src2)
+                        self.commands.execute_sub_command(dest, src1, src2)
                     case "div":
                         dest, src1, src2 = parts[1], parts[2], parts[3]
-                        self.execute_div_command(dest, src1, src2)
+                        error_message = self.commands.execute_div_command(dest, src1, src2)
+                        if error_message:
+                            self.console_output.insert('end', f"{error_message}\n")
                     case "mul":
                         dest, src1, src2 = parts[1], parts[2], parts[3]
-                        self.execute_mul_command(dest, src1, src2)
+                        self.commands.execute_mul_command(dest, src1, src2)
                     case "lw":
                         register, var_name = parts[1], parts[2]
                         if var_name in self.data_section:
-                            self.update_register_value(register, int(self.data_section[var_name], 16))
-
+                            self.commands.update_register_value(register, int(self.data_section[var_name], 16))
 
         self.console_output.insert('end', f"Registers Updated.\n")
-
 
 if __name__ == "__main__":
     root = tk.Tk()
