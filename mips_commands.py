@@ -4,6 +4,8 @@ class MIPSCommands:
     def __init__(self, tree):
         self.tree = tree
 
+#REGISTER OPERATIONS
+
     def get_register_value(self, register_name):
         """Register'ın hexadecimal value değerini döndürür."""
         for item in self.tree.get_children():
@@ -23,6 +25,8 @@ class MIPSCommands:
         """Tüm register'ları sıfırlamak için fonksiyon."""
         for item in self.tree.get_children():
             self.tree.set(item, column="Value", value="0x00000000")  # Tüm register'ların değerini sıfırla
+
+#ARİTHMETİC INSTRUCTIONS
 
     def execute_add_command(self, dest, src1, src2):
         """ADD komutunu işler ve sonucu hedef register'a yazar."""

@@ -142,6 +142,12 @@ class MIPSIDE:
             command = parts[0]
 
             match command:
+                #Register instructions
+                case "lw":
+                    register, var_name = parts[1], parts[2]
+                    if var_name in self.data_section:
+                        self.commands.update_register_value(register, int(self.data_section[var_name], 16))
+                #Arithmetic instructions
                 case "add":
                     dest, src1, src2 = parts[1], parts[2], parts[3]
                     self.commands.execute_add_command(dest, src1, src2)
@@ -156,16 +162,7 @@ class MIPSIDE:
                 case "mul":
                     dest, src1, src2 = parts[1], parts[2], parts[3]
                     self.commands.execute_mul_command(dest, src1, src2)
-                case "lw":
-                    register, var_name = parts[1], parts[2]
-                    if var_name in self.data_section:
-                        self.commands.update_register_value(register, int(self.data_section[var_name], 16))
-                case "add":
-                    dest, src1, src2 = parts[1], parts[2], parts[3]
-                    self.commands.execute_add_command(dest, src1, src2)
-                case "sub":
-                    dest, src1, src2 = parts[1], parts[2], parts[3]
-                    self.commands.execute_sub_command(dest, src1, src2)
+                #Logical instructions
                 case "and":
                     dest, src1, src2 = parts[1], parts[2], parts[3]
                     self.commands.execute_and_command(dest, src1, src2)
