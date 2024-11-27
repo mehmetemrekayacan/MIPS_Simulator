@@ -54,3 +54,44 @@ class MIPSCommands:
         val2 = self.get_register_value(src2)  # Kaynak 2'nin değeri
         result = val1 * val2  # Çarpma işlemi
         self.update_register_value(dest, result)  # Sonucu hedef register'a yaz
+
+
+#LOGİCAL INSTRUCTIONS
+
+    def execute_and_command(self, dest, src1, src2):
+        """AND komutunu işler ve sonucu hedef register'a yazar (Bitwise AND)."""
+        val1 = self.get_register_value(src1)
+        val2 = self.get_register_value(src2)
+        result = val1 & val2  # Bitwise AND
+        self.update_register_value(dest, result)
+
+    def execute_or_command(self, dest, src1, src2):
+        """OR komutunu işler ve sonucu hedef register'a yazar (Bitwise OR)."""
+        val1 = self.get_register_value(src1)
+        val2 = self.get_register_value(src2)
+        result = val1 | val2  # Bitwise OR
+        self.update_register_value(dest, result)
+
+    def execute_andi_command(self, dest, src1, immediate):
+        """ANDI komutunu işler ve sonucu hedef register'a yazar (Bitwise AND with immediate)."""
+        val1 = self.get_register_value(src1)
+        result = val1 & immediate  # Bitwise AND with immediate
+        self.update_register_value(dest, result)
+
+    def execute_ori_command(self, dest, src1, immediate):
+        """ORI komutunu işler ve sonucu hedef register'a yazar (Bitwise OR with immediate)."""
+        val1 = self.get_register_value(src1)
+        result = val1 | immediate  # Bitwise OR with immediate
+        self.update_register_value(dest, result)
+
+    def execute_sll_command(self, dest, src1, shift_amount):
+        """SLL komutunu işler ve sonucu hedef register'a yazar (Shift left logical)."""
+        val1 = self.get_register_value(src1)
+        result = val1 << shift_amount  # Shift left by constant number of bits
+        self.update_register_value(dest, result)
+
+    def execute_srl_command(self, dest, src1, shift_amount):
+        """SRL komutunu işler ve sonucu hedef register'a yazar (Shift right logical)."""
+        val1 = self.get_register_value(src1)
+        result = val1 >> shift_amount  # Shift right by constant number of bits
+        self.update_register_value(dest, result)

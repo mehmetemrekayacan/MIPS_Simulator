@@ -160,6 +160,30 @@ class MIPSIDE:
                     register, var_name = parts[1], parts[2]
                     if var_name in self.data_section:
                         self.commands.update_register_value(register, int(self.data_section[var_name], 16))
+                case "add":
+                    dest, src1, src2 = parts[1], parts[2], parts[3]
+                    self.commands.execute_add_command(dest, src1, src2)
+                case "sub":
+                    dest, src1, src2 = parts[1], parts[2], parts[3]
+                    self.commands.execute_sub_command(dest, src1, src2)
+                case "and":
+                    dest, src1, src2 = parts[1], parts[2], parts[3]
+                    self.commands.execute_and_command(dest, src1, src2)
+                case "or":
+                    dest, src1, src2 = parts[1], parts[2], parts[3]
+                    self.commands.execute_or_command(dest, src1, src2)
+                case "andi":
+                    dest, src1, immediate = parts[1], parts[2], int(parts[3])
+                    self.commands.execute_andi_command(dest, src1, immediate)
+                case "ori":
+                    dest, src1, immediate = parts[1], parts[2], int(parts[3])
+                    self.commands.execute_ori_command(dest, src1, immediate)
+                case "sll":
+                    dest, src1, shift_amount = parts[1], parts[2], int(parts[3])
+                    self.commands.execute_sll_command(dest, src1, shift_amount)
+                case "srl":
+                    dest, src1, shift_amount = parts[1], parts[2], int(parts[3])
+                    self.commands.execute_srl_command(dest, src1, shift_amount)
 
             self.console_output.insert('end', f"Executed: {line}\n")
             self.current_line += 1
