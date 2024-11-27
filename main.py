@@ -8,12 +8,13 @@ class MIPSIDE:
         self.root = root
         self.root.title("MIPS IDE - Python")
         self.root.geometry("1200x700")
-        
+
         self.data_section = {}  # .data bölümündeki değişkenleri saklamak için sözlük
+        self.current_line = 0  # Step-by-step için adım sayacı
+        self.instructions = []  # İşlenecek MIPS komutlarını depolamak için liste
         
         self.create_widgets()  # Arayüz bileşenlerini oluştur
-
-        self.commands = MIPSCommands(self.tree)  # Create an instance of MIPSCommands
+        self.commands = MIPSCommands(self.tree)  # Komut sınıfını başlat
 
     def create_widgets(self):
         # Sol üstteki düzenleme penceresi için bir Frame
@@ -70,9 +71,12 @@ class MIPSIDE:
         clear_button = tk.Button(self.console_frame, text="Clear", command=lambda: self.console_output.delete('1.0', 'end'))
         clear_button.pack(side='left')
 
-        # Konsol çerçevesine 'Run' butonu ekle
         run_button = tk.Button(self.console_frame, text="Run", command=self.read_mips_code)
         run_button.pack(side='left')
+
+        # Step butonu ekle
+        step_button = tk.Button(self.console_frame, text="Step", command=self.step_execution)
+        step_button.pack(side='left')
 
     def update_line_numbers(self, event=None):
         lines = self.edit_text.get('1.0', 'end-1c').split('\n')
@@ -95,6 +99,7 @@ class MIPSIDE:
         self.console_output.delete('1.0', 'end')  # Önceki konsol çıktısını temizler
         code = self.edit_text.get('1.0', 'end-1c')  # Düzenleme alanındaki tüm kodu al
         lines = [line.strip() for line in code.split('\n') if line.strip()]  # Satırları temizle
+        self.instructions = []  # Komutları temizle
 
         # .data bölümündeki değişkenleri toplama
         in_data_section = False
@@ -113,37 +118,49 @@ class MIPSIDE:
 
         self.console_output.insert('end', f"Data Section: {self.data_section}\n")
 
-        # Main içindeki komutları işleme
+        # .text bölümünden komutları topla
         in_main = False
         for line in lines:
             if line.startswith("main:"):
                 in_main = True
                 continue
             if in_main:
-                parts = [part.strip() for part in line.replace(",", " ").split()]
-                command = parts[0]
+                self.instructions.append(line.strip())
 
-                match command:  # Match-case yapısı kullanılıyor
-                    case "add":
-                        dest, src1, src2 = parts[1], parts[2], parts[3]
-                        self.commands.execute_add_command(dest, src1, src2)
-                    case "sub":
-                        dest, src1, src2 = parts[1], parts[2], parts[3]
-                        self.commands.execute_sub_command(dest, src1, src2)
-                    case "div":
-                        dest, src1, src2 = parts[1], parts[2], parts[3]
-                        error_message = self.commands.execute_div_command(dest, src1, src2)
-                        if error_message:
-                            self.console_output.insert('end', f"{error_message}\n")
-                    case "mul":
-                        dest, src1, src2 = parts[1], parts[2], parts[3]
-                        self.commands.execute_mul_command(dest, src1, src2)
-                    case "lw":
-                        register, var_name = parts[1], parts[2]
-                        if var_name in self.data_section:
-                            self.commands.update_register_value(register, int(self.data_section[var_name], 16))
+        self.current_line = 0  # Adım sayacını sıfırla
+        self.console_output.insert('end', "Loaded instructions. Ready to step through.\n")
 
-        self.console_output.insert('end', f"Registers Updated.\n")
+    def step_execution(self):
+        """Bir sonraki komutu çalıştırır."""
+        if self.current_line < len(self.instructions):
+            line = self.instructions[self.current_line]
+            parts = [part.strip() for part in line.replace(",", " ").split()]
+            command = parts[0]
+
+            match command:
+                case "add":
+                    dest, src1, src2 = parts[1], parts[2], parts[3]
+                    self.commands.execute_add_command(dest, src1, src2)
+                case "sub":
+                    dest, src1, src2 = parts[1], parts[2], parts[3]
+                    self.commands.execute_sub_command(dest, src1, src2)
+                case "div":
+                    dest, src1, src2 = parts[1], parts[2], parts[3]
+                    error_message = self.commands.execute_div_command(dest, src1, src2)
+                    if error_message:
+                        self.console_output.insert('end', f"{error_message}\n")
+                case "mul":
+                    dest, src1, src2 = parts[1], parts[2], parts[3]
+                    self.commands.execute_mul_command(dest, src1, src2)
+                case "lw":
+                    register, var_name = parts[1], parts[2]
+                    if var_name in self.data_section:
+                        self.commands.update_register_value(register, int(self.data_section[var_name], 16))
+
+            self.console_output.insert('end', f"Executed: {line}\n")
+            self.current_line += 1
+        else:
+            self.console_output.insert('end', "No more instructions to execute.\n")
 
 if __name__ == "__main__":
     root = tk.Tk()
