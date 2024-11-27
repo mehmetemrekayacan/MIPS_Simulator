@@ -18,6 +18,11 @@ class MIPSCommands:
             if name == register_name:
                 hex_value = f"0x{new_value:08X}"  # Yeni değer hexadecimal formatta
                 self.tree.set(item, column="Value", value=hex_value)
+    
+    def clear_registers(self):
+        """Tüm register'ları sıfırlamak için fonksiyon."""
+        for item in self.tree.get_children():
+            self.tree.set(item, column="Value", value="0x00000000")  # Tüm register'ların değerini sıfırla
 
     def execute_add_command(self, dest, src1, src2):
         """ADD komutunu işler ve sonucu hedef register'a yazar."""

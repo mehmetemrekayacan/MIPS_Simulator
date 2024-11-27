@@ -68,7 +68,7 @@ class MIPSIDE:
         self.console_output = tk.Text(self.console_frame, height=8, bg='black', fg='white')
         self.console_output.pack(fill='both', expand=True)
 
-        clear_button = tk.Button(self.console_frame, text="Clear", command=lambda: self.console_output.delete('1.0', 'end'))
+        clear_button = tk.Button(self.console_frame, text="Clear", command=self.clear_registers)
         clear_button.pack(side='left')
 
         run_button = tk.Button(self.console_frame, text="Run", command=self.read_mips_code)
@@ -77,6 +77,10 @@ class MIPSIDE:
         # Step butonu ekle
         step_button = tk.Button(self.console_frame, text="Step", command=self.step_execution)
         step_button.pack(side='left')
+
+    def clear_registers(self):
+        self.commands.clear_registers()  # MIPSCommands sınıfındaki clear_registers fonksiyonunu çağırır
+        self.console_output.insert('end', "Registers cleared.\n")  # Konsola mesaj yazdır
 
     def update_line_numbers(self, event=None):
         lines = self.edit_text.get('1.0', 'end-1c').split('\n')
