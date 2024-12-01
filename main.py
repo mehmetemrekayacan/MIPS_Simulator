@@ -124,20 +124,25 @@ class MIPSIDE:
         data_section = {}
         try:
             data_start = next(i for i, line in enumerate(lines) if line.strip() == ".data")
-            data_end = next(i for i, line in enumerate(lines[data_start+1:], start=data_start+1) if line.strip() == ".text")
+            data_end = next(i for i, line in enumerate(lines[data_start+1:], start=data_start+1) 
+                            if line.strip() == ".text" or not line.strip())
         except StopIteration:
-            return data_section
+            data_end = len(lines)
 
         for line in lines[data_start+1:data_end]:
-            line = line.strip().replace(",", " ")
-            parts = line.split()
-            if len(parts) >= 2 and ":" in parts[0]:
-                var_name = parts[0].replace(":", "")
-                try:
-                    var_value = self._to_hex(int(parts[-1]))
-                    data_section[var_name] = var_value
-                except ValueError:
-                    pass
+            line = line.strip()
+            if ":" in line and ".word" in line:
+                parts = line.split(":")
+                var_name = parts[0].strip()
+                value_part = parts[1].strip().split()
+                
+                if len(value_part) > 1 and value_part[0] == ".word":
+                    try:
+                        # Doğrudan integer olarak sakla
+                        var_value = int(value_part[1])
+                        data_section[var_name] = var_value
+                    except ValueError:
+                        pass
         return data_section
 
     def _parse_text_section(self, lines):
@@ -180,6 +185,7 @@ class MIPSIDE:
 
         instruction_map = {
             "lw": self._handle_lw,
+            "sw": self._handle_sw,
             "add": self._handle_arithmetic,
             "sub": self._handle_arithmetic,
             "mul": self._handle_arithmetic,
@@ -189,7 +195,12 @@ class MIPSIDE:
             "andi": self._handle_immediate_logical,
             "ori": self._handle_immediate_logical,
             "sll": self._handle_shift,
-            "srl": self._handle_shift
+            "srl": self._handle_shift,
+            "slt": self._handle_slt,
+            "beq": self._handle_branch,
+            "bne": self._handle_branch,
+            "j": self._handle_jump,
+            "jal": self._handle_jump
         }
 
         handler = instruction_map.get(command)
@@ -203,14 +214,6 @@ class MIPSIDE:
             self._log_to_console(f"Unsupported instruction: {command}")
 
         self.current_line += 1
-
-    def _handle_lw(self, _, parts):
-        register, var_name = parts
-        if var_name in self.data_section:
-            self.commands.update_register_value(
-                register, 
-                int(self.data_section[var_name], 16)
-            )
 
     def _handle_arithmetic(self, command, parts):
         dest, src1, src2 = parts
@@ -249,6 +252,53 @@ class MIPSIDE:
         }
         method = method_map[command]
         method(dest, src1, int(shift_amount))
+
+    def _handle_lw(self, _, parts):
+        register, var_name = parts
+        if var_name in self.data_section:
+            # Doğrudan integer değeri kayıt defterine yükle
+            self.commands.update_register_value(
+                register, 
+                self.data_section[var_name]  # Artık int olarak geliyor
+            )
+    def _handle_sw(self, _, parts):
+        """Handle store word instruction"""
+        if len(parts) == 2:
+            src_reg, memory_address = parts
+            
+            # Eğer memory_address bir değişken adı ise
+            if memory_address in self.data_section:
+                # Değişkenin değerini güncelle
+                self.data_section[memory_address] = self.commands.get_register_value(src_reg)
+                self._log_to_console(f"Stored {self.data_section[memory_address]} in {memory_address}")
+            else:
+                # Bellek adresi için genel işlem
+                result = self.commands.execute_sw_command(src_reg, memory_address)
+                if result:
+                    self._log_to_console(result)
+        else:
+            self._log_to_console(f"Invalid sw instruction: {parts}")
+
+    def _handle_slt(self, _, parts):
+        """Handle set less than instruction"""
+        dest, src1, src2 = parts
+        self.commands.execute_slt_command(dest, src1, src2)
+
+    def _handle_branch(self, command, parts):
+        """Handle branch instructions"""
+        reg1, reg2, label = parts
+        if command == "beq":
+            return self.commands.execute_beq_command(reg1, reg2, label)
+        elif command == "bne":
+            return self.commands.execute_bne_command(reg1, reg2, label)
+
+    def _handle_jump(self, command, parts):
+        """Handle jump instructions"""
+        label = parts[0]
+        if command == "j":
+            return self.commands.execute_j_command(label)
+        elif command == "jal":
+            return self.commands.execute_jal_command(label)
 
 if __name__ == "__main__":
     root = tk.Tk()

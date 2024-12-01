@@ -82,3 +82,59 @@ class MIPSCommands:
         val1 = self.get_register_value(src1)
         result = val1 >> shift_amount
         self.update_register_value(dest, result)
+
+    def execute_slt_command(self, dest: str, src1: str, src2: str):
+        """Set Less Than komutunu uygular"""
+        val1 = self.get_register_value(src1)
+        val2 = self.get_register_value(src2)
+        result = 1 if val1 < val2 else 0
+        self.update_register_value(dest, result)
+
+    def execute_beq_command(self, reg1: str, reg2: str, label: str):
+        """Equal ise branch yapar"""
+        val1 = self.get_register_value(reg1)
+        val2 = self.get_register_value(reg2)
+        
+        if val1 == val2:
+            return f"Branching to {label}"
+        return None
+
+    def execute_bne_command(self, reg1: str, reg2: str, label: str):
+        """Not Equal ise branch yapar"""
+        val1 = self.get_register_value(reg1)
+        val2 = self.get_register_value(reg2)
+        
+        if val1 != val2:
+            return f"Branching to {label}"
+        return None
+
+    def execute_j_command(self, label: str):
+        """Unconditional Jump komutunu uygular"""
+        return f"Jumping to {label}"
+
+    def execute_jal_command(self, label: str):
+        """Jump and Link komutunu uygular"""
+        # $ra (return address) register'ını güncelle
+        self.update_register_value("$ra", self.current_line + 1)
+        return f"Jumping to {label} and storing return address"
+
+    def execute_sw_command(self, src_reg: str, memory_address: str):
+        """Store Word komutunu daha esnek şekilde uygular"""
+        value = self.get_register_value(src_reg)
+        
+        try:
+            # Parantezli formatı parse etme
+            import re
+            match = re.match(r'(-?\d+)\((\$\w+)\)', memory_address)
+            if match:
+                offset = int(match.group(1))
+                base_reg = match.group(2)
+                base_value = self.get_register_value(base_reg)
+                
+                # Basit bir bellek simülasyonu
+                memory_loc = base_value + offset
+                return f"Stored {value} at memory location {memory_loc}"
+            else:
+                return f"Invalid memory address format: {memory_address}"
+        except Exception as e:
+            return f"Error in store word: {str(e)}"
