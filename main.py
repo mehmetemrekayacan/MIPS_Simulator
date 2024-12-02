@@ -146,17 +146,24 @@ class MIPSIDE:
         return data_section
 
     def _parse_text_section(self, lines):
-        """Parse .text section more robustly."""
+        """Parse .text section more robustly, handling inline comments."""
         try:
             main_start = next(i for i, line in enumerate(lines) if line.strip() == "main:")
-            instructions = [
-                line.strip() for line in lines[main_start+1:] 
-                if line.strip() and not line.strip().startswith(('.', ':'))
-            ]
+            instructions = []
+            for line in lines[main_start+1:]:
+                line = line.strip()
+                if not line or line.startswith(('.', ':')):
+                    continue
+                if '#' in line:
+                    line = line.split('#')[0].strip()
+
+                if line:
+                    instructions.append(line)
+            
             return instructions
         except StopIteration:
             return []
-
+    
     def _read_mips_code(self):
         self.console_output.delete('1.0', 'end')
         code = self.edit_text.get('1.0', 'end-1c')
