@@ -25,8 +25,8 @@ class MIPSIDE:
 
         # Line numbers
         self.line_numbers = tk.Text(self.edit_frame, width=4, padx=3, 
-                                     takefocus=0, border=0,
-                                     background='lightgray', state='disabled')
+                                    takefocus=0, border=0,
+                                    background='lightgray', state='disabled')
         self.line_numbers.pack(side='left', fill='y')
 
         # Scrollbar
@@ -43,12 +43,15 @@ class MIPSIDE:
         self.edit_text = tk.Text(
             self.edit_frame, 
             wrap='none', 
-            yscrollcommand=self.scrollbar.set
+            yscrollcommand=self.scrollbar.set,
+            undo=True  # Undo özelliğini etkinleştir
         )
         self.edit_text.pack(side='right', fill='both', expand=True)
 
         self.edit_text.bind('<KeyRelease>', self._update_line_numbers)
         self.edit_text.bind("<MouseWheel>", self._on_mouse_wheel)
+        self.edit_text.bind("<Control-z>", self._undo)  # Ctrl+Z için bağlama
+        self.edit_text.bind("<Control-y>", self._redo)  # Ctrl+Y için bağlama
 
         # Register frame
         self.register_frame = tk.Frame(self.root, relief='solid', borderwidth=1)
@@ -93,6 +96,23 @@ class MIPSIDE:
         tk.Button(btn_frame, text="Clear", command=self._clear_registers).pack(side='left')
         tk.Button(btn_frame, text="Run", command=self._read_mips_code).pack(side='left')
         tk.Button(btn_frame, text="Step", command=self._step_execution).pack(side='left')
+
+    def _undo(self, event=None):
+        """Handle Ctrl+Z (undo)."""
+        try:
+            self.edit_text.edit_undo()
+        except tk.TclError:
+            pass
+        return "break"
+
+    def _redo(self, event=None):
+        """Handle Ctrl+Y (redo)."""
+        try:
+            self.edit_text.edit_redo()
+        except tk.TclError:
+            pass
+        return "break"
+
 
     def _clear_registers(self):
         self.commands.clear_registers()
