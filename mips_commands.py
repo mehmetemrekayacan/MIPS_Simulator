@@ -13,17 +13,30 @@ class MIPSCommands:
                 return item
         return None
 
-    def get_register_value(self, register_name: str) -> int:
-        """Get register value as integer."""
+    def get_register_value(self, register_name):
+        """Return the value of the register by name."""
         item = self._find_register_item(register_name)
-        return int(self.tree.item(item, 'values')[2], 16) if item else 0
+        if item:
+            hex_value = self.tree.item(item, 'values')[2]  # Get the hex value
+            try:
+                # Handle negative numbers correctly
+                if hex_value.startswith('-0x'):
+                    return int(hex_value, 16)  # Negative hex value in two's complement format
+                return int(hex_value, 16)  # Standard case for positive hex values
+            except ValueError:
+                return 0  # Default value for malformed hex formats
+        return 0
 
     def update_register_value(self, register_name: str, new_value: Union[int, str]):
         """Update register value in the tree."""
         item = self._find_register_item(register_name)
         if item:
-            hex_value = f"0x{int(new_value):08X}"
+            if isinstance(new_value, int):
+                hex_value = f"0x{new_value & 0xFFFFFFFF:08X}"  # Ensure 32-bit representation
+            else:
+                hex_value = f"0x{int(new_value, 16) & 0xFFFFFFFF:08X}"  # Convert string to hex and mask to 32-bit
             self.tree.set(item, column="Value", value=hex_value)
+
 
     def clear_registers(self):
         """Reset all registers to zero."""
