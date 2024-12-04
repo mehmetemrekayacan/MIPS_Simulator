@@ -185,6 +185,7 @@ class MIPSIDE:
             return []
     
     def _read_mips_code(self):
+        """MIPS kodunu yükler ve etiketleri haritalar."""
         self.console_output.delete('1.0', 'end')
         code = self.edit_text.get('1.0', 'end-1c')
         lines = [line.strip() for line in code.split('\n') if line.strip()]
@@ -193,8 +194,18 @@ class MIPSIDE:
         self._log_to_console(f"Data Section: {self.data_section}")
 
         self.instructions = self._parse_text_section(lines)
+        self.labels = self._map_labels(self.instructions)  # Etiket haritası oluştur
         self.current_line = 0
         self._log_to_console("Loaded instructions. Ready to step through.")
+
+    def _map_labels(self, instructions):
+        """Etiketlerin koddaki sırasını belirler."""
+        labels = {}
+        for index, instruction in enumerate(instructions):
+            if ':' in instruction:  # Etiket var mı?
+                label, _ = instruction.split(':', 1)
+                labels[label.strip()] = index
+        return labels
 
     def _log_to_console(self, message: str):
         """Convenience method to log messages to console."""
@@ -312,20 +323,30 @@ class MIPSIDE:
         self.commands.execute_slt_command(dest, src1, src2)
 
     def _handle_branch(self, command, parts):
-        """Handle branch instructions"""
+        """Branch talimatlarını işler."""
         reg1, reg2, label = parts
-        if command == "beq":
-            return self.commands.execute_beq_command(reg1, reg2, label)
-        elif command == "bne":
-            return self.commands.execute_bne_command(reg1, reg2, label)
+        val1 = self.commands.get_register_value(reg1)
+        val2 = self.commands.get_register_value(reg2)
+        
+        if command == "beq" and val1 == val2:
+            self.current_line = self.labels[label]  # Dallanmayı gerçekleştir
+            return f"Branching to {label} (line {self.current_line})"
+        elif command == "bne" and val1 != val2:
+            self.current_line = self.labels[label]
+            return f"Branching to {label} (line {self.current_line})"
+        return f"No branching for {command}."
+
 
     def _handle_jump(self, command, parts):
-        """Handle jump instructions"""
+        """Jump talimatlarını işler."""
         label = parts[0]
         if command == "j":
-            return self.commands.execute_j_command(label)
+            self.current_line = self.labels[label]  # Atlama işlemi
+            return f"Jumping to {label} (line {self.current_line})"
         elif command == "jal":
-            return self.commands.execute_jal_command(label)
+            self.commands.update_register_value("$ra", self.current_line + 1)  # Return adresini kaydet
+            self.current_line = self.labels[label]
+            return f"Jumping to {label} and storing return address."
 
 if __name__ == "__main__":
     root = tk.Tk()
