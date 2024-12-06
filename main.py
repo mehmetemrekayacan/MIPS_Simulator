@@ -11,6 +11,8 @@ class MIPSIDE:
         self.root.title("MIPS IDE - Python")
         self.root.geometry("1200x700")
 
+        self.program_counter = 0
+
         self.data_section: Dict[str, str] = {}
         self.current_line = 0
         self.instructions = []
@@ -90,12 +92,19 @@ class MIPSIDE:
         )
         self.console_output.pack(fill='both', expand=True)
 
+        self.pc_label = tk.Label(self.console_frame, text=f"PC: {self.program_counter}", font=("Arial", 12), anchor="w")
+        self.pc_label.pack(side="top", fill="x")
+
         btn_frame = tk.Frame(self.console_frame)
         btn_frame.pack(side='top', fill='x')
 
         tk.Button(btn_frame, text="Clear", command=self._clear_registers).pack(side='left')
         tk.Button(btn_frame, text="Run", command=self._read_mips_code).pack(side='left')
         tk.Button(btn_frame, text="Step", command=self._step_execution).pack(side='left')
+
+    def _update_program_counter_display(self):
+        """Update the program counter display in hexadecimal format."""
+        self.pc_label.config(text=f"PC: {self._to_hex(self.program_counter)}")
 
     def _undo(self, event=None):
         """Handle Ctrl+Z (undo)."""
@@ -115,8 +124,10 @@ class MIPSIDE:
 
 
     def _clear_registers(self):
-        self.commands.clear_registers()
-        self._log_to_console("Registers cleared.")
+        self.commands.clear_registers()  # Clear the registers
+        self.program_counter = 0  # Reset the program counter
+        self._update_program_counter_display()  # Update the display with the reset PC
+        self._log_to_console("Registers cleared and PC reset.")
 
     def _update_line_numbers(self, event=None):
         lines = self.edit_text.get('1.0', 'end-1c').split('\n')
@@ -198,6 +209,9 @@ class MIPSIDE:
         self.current_line = 0
         self._log_to_console("Loaded instructions. Ready to step through.")
 
+        self.program_counter = 0  # PC'yi sıfırla
+        self._update_program_counter_display()
+
     def _map_labels(self, instructions):
         """Etiketlerin koddaki sırasını belirler."""
         labels = {}
@@ -220,6 +234,9 @@ class MIPSIDE:
         line = self.instructions[self.current_line]
         parts = [part.strip() for part in line.replace(",", " ").split()]
         command = parts[0]
+
+        self.program_counter += 4
+        self._update_program_counter_display()
 
         instruction_map = {
             "lw": self._handle_lw,
@@ -329,24 +346,30 @@ class MIPSIDE:
         val2 = self.commands.get_register_value(reg2)
         
         if command == "beq" and val1 == val2:
-            self.current_line = self.labels[label]  # Dallanmayı gerçekleştir
-            return f"Branching to {label} (line {self.current_line})"
-        elif command == "bne" and val1 != val2:
+            self.program_counter = self.labels[label] * 4  # Dallanma hedefine atla
             self.current_line = self.labels[label]
-            return f"Branching to {label} (line {self.current_line})"
-        return f"No branching for {command}."
-
+            self._update_program_counter_display()
+            return f"Branching to {label} (PC={self.program_counter})"
+        elif command == "bne" and val1 != val2:
+            self.program_counter = self.labels[label] * 4
+            self.current_line = self.labels[label]
+            self._update_program_counter_display()
+            return f"Branching to {label} (PC={self.program_counter})"
 
     def _handle_jump(self, command, parts):
         """Jump talimatlarını işler."""
         label = parts[0]
         if command == "j":
-            self.current_line = self.labels[label]  # Atlama işlemi
-            return f"Jumping to {label} (line {self.current_line})"
-        elif command == "jal":
-            self.commands.update_register_value("$ra", self.current_line + 1)  # Return adresini kaydet
+            self.program_counter = self.labels[label] * 4
             self.current_line = self.labels[label]
-            return f"Jumping to {label} and storing return address."
+            self._update_program_counter_display()
+            return f"Jumping to {label} (PC={self.program_counter})"
+        elif command == "jal":
+            self.commands.update_register_value("$ra", self.program_counter + 4)  # Return adresini kaydet
+            self.program_counter = self.labels[label] * 4
+            self.current_line = self.labels[label]
+            self._update_program_counter_display()
+            return f"Jumping to {label} and storing return address (PC={self.program_counter})"
 
 if __name__ == "__main__":
     root = tk.Tk()
