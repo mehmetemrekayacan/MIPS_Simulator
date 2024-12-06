@@ -151,3 +151,15 @@ class MIPSCommands:
                 return f"Invalid memory address format: {memory_address}"
         except Exception as e:
             return f"Error in store word: {str(e)}"
+        
+    def execute_addi_command(self, dest: str, src1: str, immediate: int):
+        """Add immediate value to register."""
+        val1 = self.get_register_value(src1)
+        result = val1 + immediate
+        self.update_register_value(dest, result)
+
+    def execute_jr_command(self, register: str):
+        """Jump to address stored in register."""
+        # In a real simulator, this would set the program counter to the value in the register
+        # However, in the current design, the program counter setting is handled in main.py
+        return f"Jumping to address in {register}"

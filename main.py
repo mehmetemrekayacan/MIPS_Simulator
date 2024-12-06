@@ -153,34 +153,47 @@ class MIPSIDE:
     def _parse_data_section(self, lines):
         """Parse .data section more robustly."""
         data_section = {}
+        
         try:
-            data_start = next(i for i, line in enumerate(lines) if line.strip() == ".data")
-            data_end = next(i for i, line in enumerate(lines[data_start+1:], start=data_start+1) 
-                            if line.strip() == ".text" or not line.strip())
-        except StopIteration:
-            data_end = len(lines)
+            # Find .data section if it exists
+            data_start = next((i for i, line in enumerate(lines) if line.strip() == ".data"), None)
+            
+            if data_start is not None:
+                # Try to find .text section or end of lines
+                try:
+                    data_end = next(i for i, line in enumerate(lines[data_start+1:], start=data_start+1) 
+                                    if line.strip() == ".text" or not line.strip())
+                except StopIteration:
+                    data_end = len(lines)
 
-        for line in lines[data_start+1:data_end]:
-            line = line.strip()
-            if ":" in line and ".word" in line:
-                parts = line.split(":")
-                var_name = parts[0].strip()
-                value_part = parts[1].strip().split()
-                
-                if len(value_part) > 1 and value_part[0] == ".word":
-                    try:
-                        # Doğrudan integer olarak sakla
-                        var_value = int(value_part[1])
-                        data_section[var_name] = var_value
-                    except ValueError:
-                        pass
+                for line in lines[data_start+1:data_end]:
+                    line = line.strip()
+                    if ":" in line and ".word" in line:
+                        parts = line.split(":")
+                        var_name = parts[0].strip()
+                        value_part = parts[1].strip().split()
+                        
+                        if len(value_part) > 1 and value_part[0] == ".word":
+                            try:
+                                # Store as integer
+                                var_value = int(value_part[1])
+                                data_section[var_name] = var_value
+                            except ValueError:
+                                pass
+        except Exception:
+            # If no .data section found, return an empty dictionary
+            pass
+        
         return data_section
 
     def _parse_text_section(self, lines):
-        """Parse .text section more robustly, handling inline comments."""
+        """Parse .text section more robustly, handling inline comments and optional main label."""
+        instructions = []
+        
         try:
-            main_start = next(i for i, line in enumerate(lines) if line.strip() == "main:")
-            instructions = []
+            # Try to find main label, but don't fail if it's not there
+            main_start = next((i for i, line in enumerate(lines) if line.strip() == "main:"), 0)
+            
             for line in lines[main_start+1:]:
                 line = line.strip()
                 if not line or line.startswith(('.', ':')):
@@ -192,8 +205,9 @@ class MIPSIDE:
                     instructions.append(line)
             
             return instructions
-        except StopIteration:
-            return []
+        except Exception:
+            # If parsing fails, try to parse all lines
+            return [line.strip() for line in lines if line.strip() and not line.strip().startswith(('.', ':'))]
     
     def _read_mips_code(self):
         """MIPS kodunu yükler ve etiketleri haritalar."""
@@ -211,6 +225,10 @@ class MIPSIDE:
 
         self.program_counter = 0  # PC'yi sıfırla
         self._update_program_counter_display()
+
+        # Set $ra to point to a termination point
+        self.commands.update_register_value("$ra", len(self.instructions) * 4)
+        self._log_to_console(f"Set $ra to {len(self.instructions) * 4}")
 
     def _map_labels(self, instructions):
         """Etiketlerin koddaki sırasını belirler."""
@@ -255,7 +273,9 @@ class MIPSIDE:
             "beq": self._handle_branch,
             "bne": self._handle_branch,
             "j": self._handle_jump,
-            "jal": self._handle_jump
+            "jal": self._handle_jump,
+            "addi": self._handle_immediate_arithmetic,
+            "jr": self._handle_jr,
         }
 
         handler = instruction_map.get(command)
@@ -370,6 +390,36 @@ class MIPSIDE:
             self.current_line = self.labels[label]
             self._update_program_counter_display()
             return f"Jumping to {label} and storing return address (PC={self.program_counter})"
+        
+    def _handle_immediate_arithmetic(self, command, parts):
+        dest, src1, immediate = parts
+        self.commands.execute_addi_command(dest, src1, int(immediate))
+
+    def _handle_jr(self, _, parts):
+        """Handle jump register instruction with improved logic"""
+        register = parts[0]
+        return_address = self.commands.get_register_value(register)
+        
+        self._log_to_console(f"Jr instruction: Register {register}, Value: {return_address}")
+        
+        # If $ra is 0 or beyond instructions, consider it a program termination
+        if return_address == 0 or return_address >= len(self.instructions) * 4:
+            self._log_to_console("Program execution completed.")
+            # Reset or stop execution
+            self.current_line = len(self.instructions)
+            self.program_counter = len(self.instructions) * 4
+            self._update_program_counter_display()
+            return "Program end: Jumped to invalid/termination address"
+        
+        # Calculate the line number based on the address
+        target_line = return_address // 4
+        
+        self.program_counter = return_address
+        self.current_line = target_line
+        self._update_program_counter_display()
+        
+        self._log_to_console(f"Jumping to line {target_line} (PC={self.program_counter})")
+        return f"Jumping to line {target_line} (PC={self.program_counter})"
 
 if __name__ == "__main__":
     root = tk.Tk()
