@@ -115,6 +115,6 @@ main:
 5. Open a Pull Request
 
 ## 📧 Contact
-Your Name - youremail@example.com
+Your Name - emremehmet32@hotmail.com | emremehmet2032@gmail.com
 
-Project Link: [https://github.com/yourusername/mips-simulator](https://github.com/yourusername/mips-simulator)
+Project Link: [https://github.com/mehmetemrekayacan/mips-simulator](https://github.com/yourusername/mips-simulator)
