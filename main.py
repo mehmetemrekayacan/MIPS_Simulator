@@ -4,6 +4,7 @@ import tkinter.ttk as ttk
 from typing import Dict
 from register_data import register
 from mips_commands import MIPSCommands
+from typing import Dict, List
 
 class MIPSIDE:
     def __init__(self, root: tk.Tk):
@@ -16,6 +17,10 @@ class MIPSIDE:
         self.data_section: Dict[str, str] = {}
         self.current_line = 0
         self.instructions = []
+        
+        # Add new data memory attributes
+        self.data_memory_base = 0x10010000  # Base address for data memory
+        self.data_memory_values: List[int] = [0] * 8  # 8 slots for memory values
         
         self._create_widgets()
         self.commands = MIPSCommands(self.tree)
@@ -111,17 +116,64 @@ class MIPSIDE:
         self.instruction_memory = tk.Text(self.instruction_frame, height=10, bg="white", fg="black")
         self.instruction_memory.pack(fill="both", expand=True)
 
-        # Data memory (Data Segment)
+        # Modify the data memory frame to use a Treeview instead of Text
         self.data_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightgreen')
         self.data_frame.place(x=600, y=700, width=600, height=200)
 
         tk.Label(self.data_frame, text="Data Memory (Data Segment)", font=("Arial", 12), bg='lightgreen').pack(anchor="w")
 
-        self.data_memory = tk.Text(self.data_frame, height=10, bg="white", fg="black")
-        self.data_memory.pack(fill="both", expand=True)
+        # Create Treeview for data memory
+        columns = ["Address", "Value(+0)", "Value(+4)", "Value(+8)", "Value(+12)", 
+                   "Value(+16)", "Value(+20)", "Value(+24)"]
+        
+        self.data_memory_tree = ttk.Treeview(
+            self.data_frame, 
+            columns=columns, 
+            show='headings'
+        )
+
+        # Configure columns
+        for col in columns:
+            self.data_memory_tree.heading(col, text=col)
+            self.data_memory_tree.column(col, width=70, anchor='center')
+
+        # Insert initial row with base address
+        addresses = [f"0x{self.data_memory_base + (i*4):08X}" for i in range(8)]
+        initial_values = ["0x00000000"] * 8
+        
+        self.data_memory_tree.insert("", "end", values=[addresses[0]] + initial_values)
+
+        self.data_memory_tree.pack(fill="both", expand=True)
 
     def _update_program_counter_display(self):
         self.pc_label.config(text=f"PC: {self._to_hex(self.program_counter)}")
+
+    def _update_data_memory_display(self):
+        """Update the data memory display with current values."""
+        # Clear existing rows
+        for i in self.data_memory_tree.get_children():
+            self.data_memory_tree.delete(i)
+
+        # Recreate addresses
+        addresses = [f"0x{self.data_memory_base + (i*4):08X}" for i in range(8)]
+        
+        # Convert values to hex strings, padding with zeros
+        hex_values = [f"0x{val:08X}" if val is not None else "0x00000000" 
+                      for val in self.data_memory_values]
+        
+        # Insert updated row
+        self.data_memory_tree.insert("", "end", values=[addresses[0]] + hex_values)
+
+    def _handle_data_memory_write(self, variable_name: str, value: int):
+        """Handle writing values to data memory."""
+        # Find the index of the variable in data_section
+        variable_index = list(self.data_section.keys()).index(variable_name)
+        
+        # Update the value in data_memory_values
+        self.data_memory_values[variable_index] = value
+        
+        # Update the display
+        self._update_data_memory_display()
 
     def _undo(self, event=None):
         """Handle Ctrl+Z (undo)."""
@@ -138,7 +190,6 @@ class MIPSIDE:
         except tk.TclError:
             pass
         return "break"
-
 
     def _clear_registers(self):
         self.commands.clear_registers()  # Clear the registers
@@ -365,25 +416,35 @@ class MIPSIDE:
         method(dest, src1, int(shift_amount))
 
     def _handle_lw(self, _, parts):
+        """Enhanced load word to update data memory display."""
         register, var_name = parts
         if var_name in self.data_section:
-            # Doğrudan integer değeri kayıt defterine yükle
-            self.commands.update_register_value(
-                register, 
-                self.data_section[var_name]  # Artık int olarak geliyor
-            )
+            # Load value into register
+            value = self.data_section[var_name]
+            self.commands.update_register_value(register, value)
+            
+            # Update data memory display
+            self._handle_data_memory_write(var_name, value)
+
     def _handle_sw(self, _, parts):
-        """Handle store word instruction"""
+        """Enhanced store word to update data memory display."""
         if len(parts) == 2:
             src_reg, memory_address = parts
             
-            # Eğer memory_address bir değişken adı ise
+            # If memory_address is a variable name in data section
             if memory_address in self.data_section:
-                # Değişkenin değerini güncelle
-                self.data_section[memory_address] = self.commands.get_register_value(src_reg)
-                self._log_to_console(f"Stored {self.data_section[memory_address]} in {memory_address}")
+                # Get value from source register
+                value = self.commands.get_register_value(src_reg)
+                
+                # Update data section
+                self.data_section[memory_address] = value
+                
+                # Update data memory display
+                self._handle_data_memory_write(memory_address, value)
+                
+                self._log_to_console(f"Stored {value} in {memory_address}")
             else:
-                # Bellek adresi için genel işlem
+                # Fallback to existing sw command handling
                 result = self.commands.execute_sw_command(src_reg, memory_address)
                 if result:
                     self._log_to_console(result)
