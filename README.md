@@ -117,4 +117,4 @@ main:
 ## 📧 Contact
 Your Name - emremehmet32@hotmail.com | emremehmet2032@gmail.com
 
-Project Link: [https://github.com/mehmetemrekayacan/mips-simulator](https://github.com/mehmetemrekayacan/mips-simulator)
+Project Link: [https://github.com/mehmetemrekayacan/MIPS_Simulator](https://github.com/mehmetemrekayacan/MIPS_Simulator)
