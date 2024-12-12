@@ -9,7 +9,7 @@ class MIPSIDE:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("MIPS IDE - Python")
-        self.root.geometry("1200x700")
+        self.root.geometry("1200x900")
 
         self.program_counter = 0
 
@@ -102,8 +102,25 @@ class MIPSIDE:
         tk.Button(btn_frame, text="Run", command=self._read_mips_code).pack(side='left')
         tk.Button(btn_frame, text="Step", command=self._step_execution).pack(side='left')
 
+        # Instruction memory (Text Segment)
+        self.instruction_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightblue')
+        self.instruction_frame.place(x=0, y=700, width=600, height=200)
+
+        tk.Label(self.instruction_frame, text="Instruction Memory (Text Segment)", font=("Arial", 12), bg='lightblue').pack(anchor="w")
+
+        self.instruction_memory = tk.Text(self.instruction_frame, height=10, bg="white", fg="black")
+        self.instruction_memory.pack(fill="both", expand=True)
+
+        # Data memory (Data Segment)
+        self.data_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightgreen')
+        self.data_frame.place(x=600, y=700, width=600, height=200)
+
+        tk.Label(self.data_frame, text="Data Memory (Data Segment)", font=("Arial", 12), bg='lightgreen').pack(anchor="w")
+
+        self.data_memory = tk.Text(self.data_frame, height=10, bg="white", fg="black")
+        self.data_memory.pack(fill="both", expand=True)
+
     def _update_program_counter_display(self):
-        """Update the program counter display in hexadecimal format."""
         self.pc_label.config(text=f"PC: {self._to_hex(self.program_counter)}")
 
     def _undo(self, event=None):
@@ -189,7 +206,8 @@ class MIPSIDE:
     def _parse_text_section(self, lines):
         """Parse .text section more robustly, handling inline comments and optional main label."""
         instructions = []
-        
+        address = 0x00400000  # Start address for instructions
+
         try:
             # Try to find main label, but don't fail if it's not there
             main_start = next((i for i, line in enumerate(lines) if line.strip() == "main:"), 0)
@@ -202,15 +220,19 @@ class MIPSIDE:
                     line = line.split('#')[0].strip()
 
                 if line:
-                    instructions.append(line)
-            
+                    instructions.append({
+                        "address": f"0x{address:08X}",
+                        "source": line
+                    })
+                    address += 4
+                
             return instructions
         except Exception:
-            # If parsing fails, try to parse all lines
-            return [line.strip() for line in lines if line.strip() and not line.strip().startswith(('.', ':'))]
+            # If parsing fails, return an empty instruction list
+            return []
     
     def _read_mips_code(self):
-        """MIPS kodunu yükler ve etiketleri haritalar."""
+        """Load MIPS code, parse sections, and map labels."""
         self.console_output.delete('1.0', 'end')
         code = self.edit_text.get('1.0', 'end-1c')
         lines = [line.strip() for line in code.split('\n') if line.strip()]
@@ -218,12 +240,22 @@ class MIPSIDE:
         self.data_section = self._parse_data_section(lines)
         self._log_to_console(f"Data Section: {self.data_section}")
 
+        # Parse and store instructions with address and source line
         self.instructions = self._parse_text_section(lines)
-        self.labels = self._map_labels(self.instructions)  # Etiket haritası oluştur
+        self.labels = self._map_labels([instr["source"] for instr in self.instructions])
         self.current_line = 0
+
+        # Display instructions with address and source
+        self.instruction_memory.delete('1.0', 'end')
+        for instr in self.instructions:
+            self.instruction_memory.insert(
+                'end', 
+                f"{instr['address']}: {instr['source']}\n"
+            )
+
         self._log_to_console("Loaded instructions. Ready to step through.")
 
-        self.program_counter = 0  # PC'yi sıfırla
+        self.program_counter = 0  # Reset the program counter
         self._update_program_counter_display()
 
         # Set $ra to point to a termination point
@@ -244,17 +276,21 @@ class MIPSIDE:
         self.console_output.insert('end', f"{message}\n")
 
     def _step_execution(self):
-        """Execute next instruction with improved parsing."""
         if self.current_line >= len(self.instructions):
             self._log_to_console("No more instructions to execute.")
             return
 
-        line = self.instructions[self.current_line]
+        instruction = self.instructions[self.current_line]
+        line = instruction["source"]  # Kaynak MIPS kodunu al
+        address = instruction["address"]  # Adres bilgisini al
+
         parts = [part.strip() for part in line.replace(",", " ").split()]
         command = parts[0]
 
         self.program_counter += 4
         self._update_program_counter_display()
+
+        self._log_to_console(f"Executing at {address}: {line}")
 
         instruction_map = {
             "lw": self._handle_lw,
