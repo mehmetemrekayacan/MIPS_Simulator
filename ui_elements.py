@@ -11,8 +11,9 @@ class UIElements:
         self.program_counter_callback = program_counter_callback
         self.data_memory_values = [0] * 8
 
-        self._run_button_action = lambda: None # Initialize as a no-op lambda function.
-        self._step_button_action = lambda: None # Initialize as a no-op lambda function.
+        self._run_button_action = lambda: None
+        self._step_button_action = lambda: None
+        self._convert_button_action = lambda: None  # Machine code button action
 
         self._create_widgets()
         self._update_line_numbers()
@@ -43,14 +44,14 @@ class UIElements:
             self.edit_frame, 
             wrap='none', 
             yscrollcommand=self.scrollbar.set,
-            undo=True  # Undo özelliğini etkinleştir
+            undo=True
         )
         self.edit_text.pack(side='right', fill='both', expand=True)
 
         self.edit_text.bind('<KeyRelease>', self._update_line_numbers)
         self.edit_text.bind("<MouseWheel>", self._on_mouse_wheel)
-        self.edit_text.bind("<Control-z>", self._undo)  # Ctrl+Z için bağlama
-        self.edit_text.bind("<Control-y>", self._redo)  # Ctrl+Y için bağlama
+        self.edit_text.bind("<Control-z>", self._undo)
+        self.edit_text.bind("<Control-y>", self._redo)
 
         # Register frame
         self.register_frame = tk.Frame(self.root, relief='solid', borderwidth=1)
@@ -98,6 +99,7 @@ class UIElements:
         tk.Button(btn_frame, text="Clear", command=self._clear_registers).pack(side='left')
         tk.Button(btn_frame, text="Run", command=lambda: self._run_button_action()).pack(side='left')
         tk.Button(btn_frame, text="Step", command=lambda: self._step_button_action()).pack(side='left')
+        tk.Button(btn_frame, text="Convert Machine Code", command=lambda: self._convert_button_action()).pack(side='left')
 
         # Instruction memory (Text Segment)
         self.instruction_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightblue')
@@ -108,9 +110,17 @@ class UIElements:
         self.instruction_memory = tk.Text(self.instruction_frame, height=10, bg="white", fg="black")
         self.instruction_memory.pack(fill="both", expand=True)
 
+        # Machine code frame
+        self.machine_code_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightyellow')
+        self.machine_code_frame.place(x=600, y=700, width=600, height=200)
+
+        tk.Label(self.machine_code_frame, text="Machine Code", font=("Arial", 12), bg='lightyellow').pack(anchor="w")
+        self.machine_code_output = tk.Text(self.machine_code_frame, height=10, bg="white", fg="black")
+        self.machine_code_output.pack(fill="both", expand=True)
+        
         # Modify the data memory frame to use a Treeview instead of Text
         self.data_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightgreen')
-        self.data_frame.place(x=600, y=700, width=600, height=200)
+        self.data_frame.place(x=0, y=900, width=1200, height=200)
 
         tk.Label(self.data_frame, text="Data Memory (Data Segment)", font=("Arial", 12), bg='lightgreen').pack(anchor="w")
 
@@ -155,7 +165,6 @@ class UIElements:
         return "break"
 
     def _undo(self, event=None):
-        """Handle Ctrl+Z (undo)."""
         try:
             self.edit_text.edit_undo()
         except tk.TclError:
@@ -163,7 +172,6 @@ class UIElements:
         return "break"
 
     def _redo(self, event=None):
-        """Handle Ctrl+Y (redo)."""
         try:
             self.edit_text.edit_redo()
         except tk.TclError:
@@ -171,69 +179,55 @@ class UIElements:
         return "break"
 
     def _clear_registers(self):
-        """Clear registers button action and other UI elements."""
-        # 1. Clear Console
         self.console_output.delete('1.0', 'end')
-
-        # 2. Clear Instruction Memory
         self.instruction_memory.delete('1.0', 'end')
-
-        # 3. Clear Data Memory Values (Reset to 0)
+        self.machine_code_output.delete('1.0', 'end')
+        
         initial_values = ["0x00000000"] * 8
-        # Clear existing rows
         for i in self.data_memory_tree.get_children():
             self.data_memory_tree.delete(i)
-        # Recreate addresses
         addresses = [f"0x{self.data_memory_base + (i*4):08X}" for i in range(8)]
 
         self.data_memory_tree.insert("", "end", values=[addresses[0]] + initial_values)
-
-        # 4. Clear Registers (Set to 0)
+    
         for item in self.tree.get_children():
             self.tree.set(item, column="Value", value="0x00000000")
-
-        # 5. Reset PC Display
-        self.update_program_counter_display(0)  # Reset PC to 0
-
-        # 6. Reset program counter in executor
-        self.program_counter_callback(0) # pass 0 to reset PC in main class
+        self.update_program_counter_display(0)
+        self.program_counter_callback(0)
 
     def update_program_counter_display(self, pc: int):
-        """Update the PC display."""
         hex_pc = f"0x{pc:08X}"
         self.pc_label.config(text=f"PC: {hex_pc}")
 
     def update_data_memory_display(self, data_memory_values: List[int]):
-        """Update the data memory display with current values."""
-        # Clear existing rows
         for i in self.data_memory_tree.get_children():
             self.data_memory_tree.delete(i)
-
-        # Recreate addresses
+            
         addresses = [f"0x{self.data_memory_base + (i*4):08X}" for i in range(8)]
-        
-        # Convert values to hex strings, padding with zeros
         hex_values = [f"0x{val:08X}" if val is not None else "0x00000000" 
                       for val in data_memory_values]
         
-        # Insert updated row
         self.data_memory_tree.insert("", "end", values=[addresses[0]] + hex_values)
         
     def get_mips_code(self):
-      return self.edit_text.get('1.0', 'end-1c')
+        return self.edit_text.get('1.0', 'end-1c')
 
     def log_to_console(self, message):
-        """Log a message to the console."""
         self.console_output.insert('end', f"{message}\n")
 
     def set_instruction_memory(self, instructions: List[dict]):
-        """Display instructions in instruction memory."""
         self.instruction_memory.delete('1.0', 'end')
         for instr in instructions:
             self.instruction_memory.insert(
                 'end',
                 f"{instr['address']}: {instr['source']}\n"
             )
-
+    
+    def set_machine_code_output(self, machine_code: List[str]):
+        """Display machine code in machine code output box."""
+        self.machine_code_output.delete('1.0', 'end')
+        for code in machine_code:
+          self.machine_code_output.insert('end', f"{code}\n")
+          
     def get_register_tree(self) -> ttk.Treeview:
       return self.tree
