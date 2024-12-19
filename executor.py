@@ -28,7 +28,7 @@ class Executor:
         line = instruction["source"]  # Kaynak MIPS kodunu al
         address = instruction["address"]  # Adres bilgisini al
 
-        parts = [str(part).strip() for part in line.replace(",", " ").split()] #ensure that all parts are string
+        parts = [part.strip() for part in line.replace(",", " ").split()]
         command = parts[0]
 
         self.program_counter += 4
@@ -56,7 +56,6 @@ class Executor:
             "jal": self._handle_jump,
             "addi": self._handle_immediate_arithmetic,
             "jr": self._handle_jr,
-            "li": self._handle_li,
         }
 
         handler = instruction_map.get(command)
@@ -107,7 +106,17 @@ class Executor:
             "srl": self.commands.execute_srl_command
         }
         method = method_map[command]
-        method(dest, src1, int(shift_amount))
+        
+        if isinstance(shift_amount, str) and shift_amount.startswith("$"):
+            shift_value = self.commands.get_register_value(shift_amount)
+        else:
+            try:
+                shift_value = int(shift_amount)
+            except ValueError:
+                self.ui_log_callback(f"Error: Invalid shift amount: {shift_amount}")
+                return None
+        
+        method(dest, src1, shift_value)
 
     def _handle_lw(self, _, parts):
         """Enhanced load word to update data memory display."""
@@ -207,11 +216,6 @@ class Executor:
             self.current_line = self.labels[label]
             self.pc_update_callback(self.program_counter)
             return f"Jumping to {label} and storing return address (PC={self.program_counter})"
-    def _handle_li(self, _, parts):
-        """Handle 'li' (load immediate) pseudoinstruction"""
-        register, immediate = parts
-        self.commands.update_register_value(register, int(immediate))
-        return f"Loaded immediate value {immediate} into {register}"
         
     def _handle_immediate_arithmetic(self, command, parts):
         dest, src1, immediate = parts
