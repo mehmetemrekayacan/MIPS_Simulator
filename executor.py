@@ -28,7 +28,7 @@ class Executor:
         line = instruction["source"]  # Kaynak MIPS kodunu al
         address = instruction["address"]  # Adres bilgisini al
 
-        parts = [part.strip() for part in line.replace(",", " ").split()]
+        parts = [str(part).strip() for part in line.replace(",", " ").split()] #ensure that all parts are string
         command = parts[0]
 
         self.program_counter += 4
@@ -56,6 +56,7 @@ class Executor:
             "jal": self._handle_jump,
             "addi": self._handle_immediate_arithmetic,
             "jr": self._handle_jr,
+            "li": self._handle_li,
         }
 
         handler = instruction_map.get(command)
@@ -206,6 +207,11 @@ class Executor:
             self.current_line = self.labels[label]
             self.pc_update_callback(self.program_counter)
             return f"Jumping to {label} and storing return address (PC={self.program_counter})"
+    def _handle_li(self, _, parts):
+        """Handle 'li' (load immediate) pseudoinstruction"""
+        register, immediate = parts
+        self.commands.update_register_value(register, int(immediate))
+        return f"Loaded immediate value {immediate} into {register}"
         
     def _handle_immediate_arithmetic(self, command, parts):
         dest, src1, immediate = parts
