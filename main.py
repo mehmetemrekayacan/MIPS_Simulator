@@ -58,6 +58,7 @@ class MIPSIDE:
       self.commands.update_register_value("$ra", len(self.instructions) * 4)
       self.ui.log_to_console(f"Set $ra to {len(self.instructions) * 4}")
       self.ui.log_to_console("Loaded instructions. Ready to step through.")
+      self.executor.set_instructions(self.instructions)
       self.text_section_loaded = True
     
     def _run_button_action(self):
@@ -90,15 +91,15 @@ class MIPSIDE:
         text_instructions = self.parser.parse_text_section(lines)
 
         # Convert instructions to machine code
-        machine_code = []
+        machine_code_pairs = []
         for instruction in text_instructions:
             try:
                 machine_code_instr = self.converter.convert_to_machine_code(instruction['source'])
-                machine_code.append(machine_code_instr)  # Add the converted instruction
+                machine_code_pairs.append((instruction['source'], machine_code_instr)) # Append source and machine code
             except Exception as e:
-                machine_code.append(f"Error: {str(e)}")  # Add error message
+                machine_code_pairs.append((instruction['source'],f"Error: {str(e)}"))  # Append instruction and error message
 
-        self.ui.set_machine_code_output(machine_code)
+        self.ui.set_machine_code_output(machine_code_pairs)
         self.ui.log_to_console("MIPS code converted to machine code.")
 
 if __name__ == "__main__":

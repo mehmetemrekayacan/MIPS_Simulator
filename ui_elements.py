@@ -107,16 +107,40 @@ class UIElements:
 
         tk.Label(self.instruction_frame, text="Instruction Memory (Text Segment)", font=("Arial", 12), bg='lightblue').pack(anchor="w")
 
-        self.instruction_memory = tk.Text(self.instruction_frame, height=10, bg="white", fg="black")
-        self.instruction_memory.pack(fill="both", expand=True)
+        # Instruction memory Treeview
+        columns = ("Address", "Source Code")
+        self.instruction_memory_tree = ttk.Treeview(
+            self.instruction_frame, 
+            columns=columns, 
+            show='headings'
+        )
+
+        # Configure columns
+        for col in columns:
+            self.instruction_memory_tree.heading(col, text=col)
+            self.instruction_memory_tree.column(col, width=200, anchor='center')
+
+        self.instruction_memory_tree.pack(fill="both", expand=True)
+
 
         # Machine code frame
         self.machine_code_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightyellow')
         self.machine_code_frame.place(x=600, y=700, width=600, height=200)
 
         tk.Label(self.machine_code_frame, text="Machine Code", font=("Arial", 12), bg='lightyellow').pack(anchor="w")
-        self.machine_code_output = tk.Text(self.machine_code_frame, height=10, bg="white", fg="black")
-        self.machine_code_output.pack(fill="both", expand=True)
+        # Machine code Treeview
+        columns = ("Instruction", "Machine Code")
+        self.machine_code_tree = ttk.Treeview(
+            self.machine_code_frame, 
+            columns=columns, 
+            show='headings'
+        )
+
+        for col in columns:
+            self.machine_code_tree.heading(col, text=col)
+            self.machine_code_tree.column(col, width=200, anchor='center')
+
+        self.machine_code_tree.pack(fill="both", expand=True)
         
         # Modify the data memory frame to use a Treeview instead of Text
         self.data_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightgreen')
@@ -180,8 +204,13 @@ class UIElements:
 
     def _clear_registers(self):
         self.console_output.delete('1.0', 'end')
-        self.instruction_memory.delete('1.0', 'end')
-        self.machine_code_output.delete('1.0', 'end')
+        # Clear instruction memory treeview
+        for item in self.instruction_memory_tree.get_children():
+            self.instruction_memory_tree.delete(item)
+
+        # Clear machine code treeview
+        for item in self.machine_code_tree.get_children():
+            self.machine_code_tree.delete(item)
         
         initial_values = ["0x00000000"] * 8
         for i in self.data_memory_tree.get_children():
@@ -216,18 +245,27 @@ class UIElements:
         self.console_output.insert('end', f"{message}\n")
 
     def set_instruction_memory(self, instructions: List[dict]):
-        self.instruction_memory.delete('1.0', 'end')
+        """Display instruction memory in the treeview."""
+        for item in self.instruction_memory_tree.get_children():
+             self.instruction_memory_tree.delete(item)
+        
         for instr in instructions:
-            self.instruction_memory.insert(
-                'end',
-                f"{instr['address']}: {instr['source']}\n"
-            )
+            self.instruction_memory_tree.insert("", "end", values=(
+                instr['address'],
+                instr['source']
+            ))
+
     
-    def set_machine_code_output(self, machine_code: List[str]):
+    def set_machine_code_output(self, machine_code_pairs: List[tuple]):
         """Display machine code in machine code output box."""
-        self.machine_code_output.delete('1.0', 'end')
-        for code in machine_code:
-          self.machine_code_output.insert('end', f"{code}\n")
+        for item in self.machine_code_tree.get_children():
+            self.machine_code_tree.delete(item)
+            
+        for instruction, code in machine_code_pairs:
+            self.machine_code_tree.insert("", "end", values=(
+                instruction,
+                code
+            ))
           
     def get_register_tree(self) -> ttk.Treeview:
       return self.tree
