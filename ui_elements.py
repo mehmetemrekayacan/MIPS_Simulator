@@ -19,9 +19,35 @@ class UIElements:
         self._update_line_numbers()
 
     def _create_widgets(self):
-        self.edit_frame = tk.Frame(self.root, relief='solid', borderwidth=1)
-        self.edit_frame.place(x=0, y=0, width=900, height=450)
+        # Create a main frame for the entire UI to manage the layout better
+        main_frame = tk.Frame(self.root)
+        main_frame.pack(fill="both", expand=True)  # Allow the main frame to expand
 
+        # Top Frame for buttons and pc_label
+        top_frame = tk.Frame(main_frame)
+        top_frame.pack(side="top", fill="x", pady=5) # Add some padding for better separation
+
+        #Buttons Frame
+        btn_frame = tk.Frame(top_frame)
+        btn_frame.pack(side='left', fill='x')
+
+        tk.Button(btn_frame, text="Clear", command=self._clear_registers).pack(side='left', padx=5)
+        tk.Button(btn_frame, text="Run", command=lambda: self._run_button_action()).pack(side='left', padx=5)
+        tk.Button(btn_frame, text="Step", command=lambda: self._step_button_action()).pack(side='left', padx=5)
+        tk.Button(btn_frame, text="Convert Machine Code", command=lambda: self._convert_button_action()).pack(side='left', padx=5)
+
+         # PC Counter Label
+        self.pc_label = tk.Label(top_frame, text="PC: 0x00000000", font=("Arial", 12), anchor="e")
+        self.pc_label.pack(side="right", padx=5)
+
+        # Create a frame for the Assembly Code, Console, IM, and DM areas
+        left_frame = tk.Frame(main_frame)
+        left_frame.pack(side="left", fill="both", expand=True)
+
+        # Assembly Code Frame (Reduced width)
+        self.edit_frame = tk.Frame(left_frame, relief='solid', borderwidth=1)
+        self.edit_frame.pack(side="top", fill="both", expand=True, padx=5, pady=5, ipadx=100) # Added ipadx to reduce width
+        
         self.line_numbers = tk.Text(self.edit_frame, width=4, padx=3, 
                                     takefocus=0, border=0,
                                     background='lightgray', state='disabled')
@@ -48,32 +74,10 @@ class UIElements:
         self.edit_text.bind("<MouseWheel>", self._on_mouse_wheel)
         self.edit_text.bind("<Control-z>", self._undo)
         self.edit_text.bind("<Control-y>", self._redo)
-
-        self.register_frame = tk.Frame(self.root, relief='solid', borderwidth=1)
-        self.register_frame.place(x=900, y=0, width=300, height=700)
-
-        columns = ("Name", "Number", "Value")
-        self.tree = ttk.Treeview(self.register_frame, columns=columns, show='headings')
-
-        for col in columns:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=80, anchor='center')
-
-        self.tree.tag_configure('evenrow', background='lightgray')
-        self.tree.tag_configure('oddrow', background='white')
-
-        for index, reg in enumerate(register):
-            tag = 'evenrow' if index % 2 == 0 else 'oddrow'
-            self.tree.insert("", "end", values=(
-                reg["name"], 
-                reg["number"], 
-                reg["value"]
-            ), tags=(tag,))
-
-        self.tree.pack(fill='both', expand=True)
-
-        self.console_frame = tk.Frame(self.root, relief='solid', borderwidth=1)
-        self.console_frame.place(x=0, y=450, width=900, height=250)
+        
+        # Console Frame (Reduced width)
+        self.console_frame = tk.Frame(left_frame, relief='solid', borderwidth=1)
+        self.console_frame.pack(side="top", fill="both", padx=5, pady=5, ipadx=100) # Added ipadx to reduce width
 
         self.console_output = tk.Text(
             self.console_frame, 
@@ -83,19 +87,10 @@ class UIElements:
         )
         self.console_output.pack(fill='both', expand=True)
 
-        self.pc_label = tk.Label(self.console_frame, text="PC: 0x00000000", font=("Arial", 12), anchor="w")
-        self.pc_label.pack(side="top", fill="x")
 
-        btn_frame = tk.Frame(self.console_frame)
-        btn_frame.pack(side='top', fill='x')
-
-        tk.Button(btn_frame, text="Clear", command=self._clear_registers).pack(side='left')
-        tk.Button(btn_frame, text="Run", command=lambda: self._run_button_action()).pack(side='left')
-        tk.Button(btn_frame, text="Step", command=lambda: self._step_button_action()).pack(side='left')
-        tk.Button(btn_frame, text="Convert Machine Code", command=lambda: self._convert_button_action()).pack(side='left')
-
-        self.instruction_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightblue')
-        self.instruction_frame.place(x=0, y=700, width=600, height=200)
+        #Instruction Memory Frame (Reduced Height)
+        self.instruction_frame = tk.Frame(left_frame, relief='solid', borderwidth=1, bg='lightblue')
+        self.instruction_frame.pack(side="top", fill="both", padx=5, pady=5)
 
         tk.Label(self.instruction_frame, text="Instruction Memory (Text Segment)", font=("Arial", 12), bg='lightblue').pack(anchor="w")
 
@@ -112,26 +107,9 @@ class UIElements:
 
         self.instruction_memory_tree.pack(fill="both", expand=True)
 
-        self.machine_code_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightyellow')
-        self.machine_code_frame.place(x=600, y=700, width=600, height=200)
-
-        tk.Label(self.machine_code_frame, text="Machine Code", font=("Arial", 12), bg='lightyellow').pack(anchor="w")
-
-        columns = ("Instruction", "Machine Code")
-        self.machine_code_tree = ttk.Treeview(
-            self.machine_code_frame, 
-            columns=columns, 
-            show='headings'
-        )
-
-        for col in columns:
-            self.machine_code_tree.heading(col, text=col)
-            self.machine_code_tree.column(col, width=200, anchor='center')
-
-        self.machine_code_tree.pack(fill="both", expand=True)
-        
-        self.data_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightgreen')
-        self.data_frame.place(x=0, y=900, width=1200, height=200)
+        # Data Frame
+        self.data_frame = tk.Frame(left_frame, relief='solid', borderwidth=1, bg='lightgreen')
+        self.data_frame.pack(side="top", fill="both", padx=5, pady=5)
 
         tk.Label(self.data_frame, text="Data Memory (Data Segment)", font=("Arial", 12), bg='lightgreen').pack(anchor="w")
 
@@ -154,6 +132,55 @@ class UIElements:
             self.data_memory_tree.insert("", "end", values=[addr] + initial_values)
 
         self.data_memory_tree.pack(fill="both", expand=True)
+
+        # Create a frame for the Machine Code and Register areas
+        right_frame = tk.Frame(main_frame)
+        right_frame.pack(side="right", fill="both", expand=True)
+        
+        # Machine Code Frame (Moved to Left of Register, Reduced Height)
+        self.machine_code_frame = tk.Frame(right_frame, relief='solid', borderwidth=1, bg='lightyellow')
+        self.machine_code_frame.pack(side="left", fill="x", padx=5, pady=5, ipady=50, anchor="n") # ipady added, anchor set to 'n'
+
+        tk.Label(self.machine_code_frame, text="Machine Code", font=("Arial", 12), bg='lightyellow').pack(anchor="w")
+
+        columns = ("Instruction", "Machine Code")
+        self.machine_code_tree = ttk.Treeview(
+            self.machine_code_frame, 
+            columns=columns, 
+            show='headings'
+        )
+
+        for col in columns:
+            self.machine_code_tree.heading(col, text=col)
+            self.machine_code_tree.column(col, width=200, anchor='center')
+
+        self.machine_code_tree.pack(fill="both", expand=True)
+
+
+        # Register Frame (Reduced Height)
+        self.register_frame = tk.Frame(right_frame, relief='solid', borderwidth=1)
+        self.register_frame.pack(side="left", fill='x', padx=5, pady=5, ipady=220, anchor="n") # ipady added, anchor set to 'n'
+
+
+        columns = ("Name", "Number", "Value")
+        self.tree = ttk.Treeview(self.register_frame, columns=columns, show='headings')
+
+        for col in columns:
+            self.tree.heading(col, text=col)
+            self.tree.column(col, width=80, anchor='center')
+
+        self.tree.tag_configure('evenrow', background='lightgray')
+        self.tree.tag_configure('oddrow', background='white')
+
+        for index, reg in enumerate(register):
+            tag = 'evenrow' if index % 2 == 0 else 'oddrow'
+            self.tree.insert("", "end", values=(
+                reg["name"], 
+                reg["number"], 
+                reg["value"]
+            ), tags=(tag,))
+
+        self.tree.pack(fill='both', expand=True)
 
     def _update_line_numbers(self, event=None):
         lines = self.edit_text.get('1.0', 'end-1c').split('\n')
