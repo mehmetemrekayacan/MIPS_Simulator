@@ -1,6 +1,5 @@
 #register_data.py
 
-# Register verilerini içeren liste
 register = [
     {"name": "$zero", "number": 0, "value": "0x00000000"},
     {"name": "$at", "number": 1, "value": "0x00000000"},

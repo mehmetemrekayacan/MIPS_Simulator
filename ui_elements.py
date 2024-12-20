@@ -13,23 +13,20 @@ class UIElements:
 
         self._run_button_action = lambda: None
         self._step_button_action = lambda: None
-        self._convert_button_action = lambda: None  # Machine code button action
+        self._convert_button_action = lambda: None
 
         self._create_widgets()
         self._update_line_numbers()
 
     def _create_widgets(self):
-        # Left editing frame
         self.edit_frame = tk.Frame(self.root, relief='solid', borderwidth=1)
         self.edit_frame.place(x=0, y=0, width=900, height=450)
 
-        # Line numbers
         self.line_numbers = tk.Text(self.edit_frame, width=4, padx=3, 
                                     takefocus=0, border=0,
                                     background='lightgray', state='disabled')
         self.line_numbers.pack(side='left', fill='y')
 
-        # Scrollbar
         self.scrollbar = tk.Scrollbar(
             self.edit_frame, 
             command=lambda *args: (
@@ -39,7 +36,6 @@ class UIElements:
         )
         self.scrollbar.pack(side='right', fill='y')
 
-        # Edit text area
         self.edit_text = tk.Text(
             self.edit_frame, 
             wrap='none', 
@@ -53,11 +49,9 @@ class UIElements:
         self.edit_text.bind("<Control-z>", self._undo)
         self.edit_text.bind("<Control-y>", self._redo)
 
-        # Register frame
         self.register_frame = tk.Frame(self.root, relief='solid', borderwidth=1)
         self.register_frame.place(x=900, y=0, width=300, height=700)
 
-        # Register table
         columns = ("Name", "Number", "Value")
         self.tree = ttk.Treeview(self.register_frame, columns=columns, show='headings')
 
@@ -78,7 +72,6 @@ class UIElements:
 
         self.tree.pack(fill='both', expand=True)
 
-        # Console frame
         self.console_frame = tk.Frame(self.root, relief='solid', borderwidth=1)
         self.console_frame.place(x=0, y=450, width=900, height=250)
 
@@ -101,13 +94,11 @@ class UIElements:
         tk.Button(btn_frame, text="Step", command=lambda: self._step_button_action()).pack(side='left')
         tk.Button(btn_frame, text="Convert Machine Code", command=lambda: self._convert_button_action()).pack(side='left')
 
-        # Instruction memory (Text Segment)
         self.instruction_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightblue')
         self.instruction_frame.place(x=0, y=700, width=600, height=200)
 
         tk.Label(self.instruction_frame, text="Instruction Memory (Text Segment)", font=("Arial", 12), bg='lightblue').pack(anchor="w")
 
-        # Instruction memory Treeview
         columns = ("Address", "Source Code")
         self.instruction_memory_tree = ttk.Treeview(
             self.instruction_frame, 
@@ -115,20 +106,17 @@ class UIElements:
             show='headings'
         )
 
-        # Configure columns
         for col in columns:
             self.instruction_memory_tree.heading(col, text=col)
             self.instruction_memory_tree.column(col, width=200, anchor='center')
 
         self.instruction_memory_tree.pack(fill="both", expand=True)
 
-
-        # Machine code frame
         self.machine_code_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightyellow')
         self.machine_code_frame.place(x=600, y=700, width=600, height=200)
 
         tk.Label(self.machine_code_frame, text="Machine Code", font=("Arial", 12), bg='lightyellow').pack(anchor="w")
-        # Machine code Treeview
+
         columns = ("Instruction", "Machine Code")
         self.machine_code_tree = ttk.Treeview(
             self.machine_code_frame, 
@@ -142,13 +130,11 @@ class UIElements:
 
         self.machine_code_tree.pack(fill="both", expand=True)
         
-        # Modify the data memory frame to use a Treeview instead of Text
         self.data_frame = tk.Frame(self.root, relief='solid', borderwidth=1, bg='lightgreen')
         self.data_frame.place(x=0, y=900, width=1200, height=200)
 
         tk.Label(self.data_frame, text="Data Memory (Data Segment)", font=("Arial", 12), bg='lightgreen').pack(anchor="w")
 
-        # Create Treeview for data memory
         columns = ["Address", "Value(+0)", "Value(+4)", "Value(+8)", "Value(+12)", 
                    "Value(+16)", "Value(+20)", "Value(+24)"]
         
@@ -158,12 +144,10 @@ class UIElements:
             show='headings'
         )
 
-        # Configure columns
         for col in columns:
             self.data_memory_tree.heading(col, text=col)
             self.data_memory_tree.column(col, width=70, anchor='center')
 
-        # Insert initial row with base address
         addresses = [f"0x{self.data_memory_base + (i*4):08X}" for i in range(8)]
         initial_values = ["0x00000000"] * 8
         
@@ -204,11 +188,9 @@ class UIElements:
 
     def _clear_registers(self):
         self.console_output.delete('1.0', 'end')
-        # Clear instruction memory treeview
         for item in self.instruction_memory_tree.get_children():
             self.instruction_memory_tree.delete(item)
 
-        # Clear machine code treeview
         for item in self.machine_code_tree.get_children():
             self.machine_code_tree.delete(item)
         
@@ -245,7 +227,6 @@ class UIElements:
         self.console_output.insert('end', f"{message}\n")
 
     def set_instruction_memory(self, instructions: List[dict]):
-        """Display instruction memory in the treeview."""
         for item in self.instruction_memory_tree.get_children():
              self.instruction_memory_tree.delete(item)
         
@@ -257,7 +238,6 @@ class UIElements:
 
     
     def set_machine_code_output(self, machine_code_pairs: List[tuple]):
-        """Display machine code in machine code output box."""
         for item in self.machine_code_tree.get_children():
             self.machine_code_tree.delete(item)
             
