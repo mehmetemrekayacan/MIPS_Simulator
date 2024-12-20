@@ -9,7 +9,7 @@ class UIElements:
         self.root = root
         self.data_memory_base = data_memory_base
         self.program_counter_callback = program_counter_callback
-        self.data_memory_values = [0] * 8
+        self.data_memory_values = [0] * (512 // 4)  # Initialize for 512 bytes / 4 bytes per word
 
         self._run_button_action = lambda: None
         self._step_button_action = lambda: None
@@ -135,8 +135,7 @@ class UIElements:
 
         tk.Label(self.data_frame, text="Data Memory (Data Segment)", font=("Arial", 12), bg='lightgreen').pack(anchor="w")
 
-        columns = ["Address", "Value(+0)", "Value(+4)", "Value(+8)", "Value(+12)", 
-                   "Value(+16)", "Value(+20)", "Value(+24)"]
+        columns = ["Address"] + [f"Value(+{i*4})" for i in range(16)]
         
         self.data_memory_tree = ttk.Treeview(
             self.data_frame, 
@@ -148,10 +147,11 @@ class UIElements:
             self.data_memory_tree.heading(col, text=col)
             self.data_memory_tree.column(col, width=70, anchor='center')
 
-        addresses = [f"0x{self.data_memory_base + (i*4):08X}" for i in range(8)]
-        initial_values = ["0x00000000"] * 8
+        addresses = [f"0x{self.data_memory_base + (i*64):08X}" for i in range(8)]
+        initial_values = ["0x00000000"] * 16
         
-        self.data_memory_tree.insert("", "end", values=[addresses[0]] + initial_values)
+        for addr in addresses:
+            self.data_memory_tree.insert("", "end", values=[addr] + initial_values)
 
         self.data_memory_tree.pack(fill="both", expand=True)
 
@@ -194,12 +194,14 @@ class UIElements:
         for item in self.machine_code_tree.get_children():
             self.machine_code_tree.delete(item)
         
-        initial_values = ["0x00000000"] * 8
+        initial_values = ["0x00000000"] * 16
         for i in self.data_memory_tree.get_children():
             self.data_memory_tree.delete(i)
-        addresses = [f"0x{self.data_memory_base + (i*4):08X}" for i in range(8)]
+        
+        addresses = [f"0x{self.data_memory_base + (i*64):08X}" for i in range(8)]
 
-        self.data_memory_tree.insert("", "end", values=[addresses[0]] + initial_values)
+        for addr in addresses:
+            self.data_memory_tree.insert("", "end", values=[addr] + initial_values)
     
         for item in self.tree.get_children():
             self.tree.set(item, column="Value", value="0x00000000")
@@ -211,15 +213,24 @@ class UIElements:
         self.pc_label.config(text=f"PC: {hex_pc}")
 
     def update_data_memory_display(self, data_memory_values: List[int]):
-        for i in self.data_memory_tree.get_children():
-            self.data_memory_tree.delete(i)
+      for i in self.data_memory_tree.get_children():
+          self.data_memory_tree.delete(i)
             
-        addresses = [f"0x{self.data_memory_base + (i*4):08X}" for i in range(8)]
-        hex_values = [f"0x{val:08X}" if val is not None else "0x00000000" 
-                      for val in data_memory_values]
-        
-        self.data_memory_tree.insert("", "end", values=[addresses[0]] + hex_values)
-        
+      addresses = [f"0x{self.data_memory_base + (i*64):08X}" for i in range(8)]
+      
+      for addr_idx, addr in enumerate(addresses):
+            row_values = [addr]
+            for val_idx in range(16):
+                mem_index = addr_idx * 16 + val_idx
+                if mem_index < len(data_memory_values):
+                    val = data_memory_values[mem_index]
+                    hex_val = f"0x{val:08X}" if val is not None else "0x00000000"
+                    row_values.append(hex_val)
+                else:
+                    row_values.append("0x00000000")
+
+            self.data_memory_tree.insert("", "end", values=row_values)
+
     def get_mips_code(self):
         return self.edit_text.get('1.0', 'end-1c')
 

@@ -9,13 +9,13 @@ class Memory:
 
     def read_word(self, address: int) -> int:
         if not self.is_valid_address(address):
-            raise ValueError("Invalid memory address")
+            raise ValueError(f"Invalid memory address: {address:08X}")
         offset = address - self.base_address
         return self.memory[offset // 4]
 
     def write_word(self, address: int, value: int):
         if not self.is_valid_address(address):
-            raise ValueError("Invalid memory address")
+            raise ValueError(f"Invalid memory address: {address:08X}")
         offset = address - self.base_address
         self.memory[offset // 4] = value
 

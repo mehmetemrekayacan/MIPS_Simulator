@@ -114,9 +114,14 @@ class Executor:
               base_reg = match.group(2)
               base_value = self.commands.get_register_value(base_reg)
               memory_loc = base_value + offset
-              value = self.memory.read_word(memory_loc)
-              self.commands.update_register_value(register, value)
-              return f"Loaded {value} from memory location {memory_loc} into {register}"
+              
+              try:
+                  value = self.memory.read_word(memory_loc)
+                  self.commands.update_register_value(register, value)
+                  return f"Loaded {value} from memory location {memory_loc} into {register}"
+              except ValueError as e:
+                  return f"Error reading from memory: {str(e)}"
+
             else:
               return f"Invalid memory address: {memory_address}"
         except ValueError as e:
@@ -139,8 +144,12 @@ class Executor:
                     base_value = self.commands.get_register_value(base_reg)
                     memory_loc = base_value + offset
                     value = self.commands.get_register_value(src_reg)
-                    self.memory.write_word(memory_loc,value)
-                    return f"Stored {value} at memory location {memory_loc}"
+
+                    try:
+                        self.memory.write_word(memory_loc,value)
+                        return f"Stored {value} at memory location {memory_loc}"
+                    except ValueError as e:
+                        return f"Error writing to memory: {str(e)}"
                   else:
                       return f"Invalid memory address format: {memory_address}"
               except ValueError as e:

@@ -20,7 +20,8 @@ class MIPSIDE:
         self.root.geometry("1200x1100")
 
         self.data_memory_base = 0x10010000
-        self.data_memory_size = 512 // 4 #512 Byte
+        self.data_memory_size = 512 // 4 # 512 Bytes (Data Memory) / 4 Bytes (word)
+        self.instruction_memory_size = 512 // 4 # 512 Bytes (Instruction Memory) / 4 Bytes (word)
         self.memory = Memory(self.data_memory_base, self.data_memory_size)
         self.parser = Parser()
         self.ui = UIElements(root, self.data_memory_base, self._update_program_counter)
@@ -34,7 +35,7 @@ class MIPSIDE:
         self.ui._run_button_action = self._run_button_action
         self.ui._step_button_action = self._step_button_action
         self.ui._convert_button_action = self._convert_button_action
-
+        
     def _update_program_counter(self, pc):
         self.ui.update_program_counter_display(pc)
     
