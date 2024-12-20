@@ -20,7 +20,8 @@ class MIPSIDE:
         self.root.geometry("1200x1100")
 
         self.data_memory_base = 0x10010000
-        self.memory = Memory(self.data_memory_base, 8)
+        self.data_memory_size = 512 // 4 #512 Byte
+        self.memory = Memory(self.data_memory_base, self.data_memory_size)
         self.parser = Parser()
         self.ui = UIElements(root, self.data_memory_base, self._update_program_counter)
         self.commands = MIPSCommands(self.ui.get_register_tree())
@@ -61,29 +62,27 @@ class MIPSIDE:
       self.ui.log_to_console(f"Set $ra to {len(self.instructions) * 4}")
       self.ui.log_to_console(self.TEXT_SECTION_LOADED)
       self.executor.set_instructions(self.instructions)
-      self.text_section_loaded = True
-
-
+      
     def _run_button_action(self):
-        self.memory = Memory(self.data_memory_base, 8)  # Clear data memory
+        self.memory = Memory(self.data_memory_base, self.data_memory_size)  # Clear data memory with 512 byte size
         self.commands.clear_registers() # Clear registers
         self._load_sections()
-        self.executor = None # reset the executor
-        self.ui.log_to_console(self.DATA_SECTION_PROCESSED)
-        self.text_section_loaded = False # clear the flag
+        self.text_section_loaded = True # set the flag to true after loading
 
     def _step_button_action(self):
         if not self.text_section_loaded:
-          self._load_sections()
+            self._load_sections()
+          
         if self.executor and self.executor.current_line < len(self.instructions):
             instruction = self.instructions[self.executor.current_line]
             self.executor.execute_instruction(instruction)
             self.ui.update_data_memory_display(self.memory.get_data_memory_values())
         else:
-            if self.executor:
-               self.ui.log_to_console(self.NO_INSTRUCTIONS_TO_EXECUTE)
-            else:
-               self.ui.log_to_console(self.NO_CODE_LOADED)
+            if not self.executor:
+                self.ui.log_to_console(self.NO_CODE_LOADED)
+            elif self.executor.current_line >= len(self.instructions):
+                self.ui.log_to_console(self.NO_INSTRUCTIONS_TO_EXECUTE)
+            
 
     def _convert_button_action(self):
         code = self.ui.get_mips_code()
