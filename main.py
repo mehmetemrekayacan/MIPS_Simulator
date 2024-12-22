@@ -38,31 +38,38 @@ class MIPSIDE:
         
     def _update_program_counter(self, pc):
         self.ui.update_program_counter_display(pc)
-    
+        
     def _load_sections(self):
-      code = self.ui.get_mips_code()
-      lines = [line.strip() for line in code.split('\n') if line.strip()]
+        code = self.ui.get_mips_code()
+        lines = [line.strip() for line in code.split('\n') if line.strip()]
 
-      data_section = self.parser.parse_data_section(lines)
-      self.memory.allocate_data(data_section)
-      self.ui.log_to_console(f"Data Section: {data_section}")
-      self.ui.update_data_memory_display(self.memory.get_data_memory_values())
-      
-      self.instructions = self.parser.parse_text_section(lines)
-      self.labels = self.parser.map_labels([instr["source"] for instr in self.instructions])
-      self.ui.set_instruction_memory(self.instructions)
-      
-      self.executor = Executor(
-          self.commands,
-          self.memory,
-          self.labels,
-          self._update_program_counter,
-          self.ui.log_to_console
-      )
-      self.commands.update_register_value("$ra", len(self.instructions) * 4)
-      self.ui.log_to_console(f"Set $ra to {len(self.instructions) * 4}")
-      self.ui.log_to_console(self.TEXT_SECTION_LOADED)
-      self.executor.set_instructions(self.instructions)
+        data_section = self.parser.parse_data_section(lines)
+        self.memory.allocate_data(data_section)
+        self.ui.log_to_console(f"Data Section: {data_section}")
+        self.ui.update_data_memory_display(self.memory.get_data_memory_values())
+
+        self.instructions = self.parser.parse_text_section(lines)
+        self.labels = self.parser.map_labels([instr["source"] for instr in self.instructions])
+        self.ui.set_instruction_memory(self.instructions)
+        
+        self.executor = Executor(
+            self.commands,
+            self.memory,
+            self.labels,
+            self._update_program_counter,
+            self.ui.log_to_console
+        )
+        
+        # set $ra register in here
+        self.commands.update_register_value("$ra", len(self.instructions) * 4)
+        self.ui.log_to_console(f"Set $ra to {len(self.instructions) * 4}")
+        
+        self.ui.log_to_console(self.TEXT_SECTION_LOADED)
+        self.executor.set_instructions(self.instructions)
+        self.text_section_loaded = True # Set the flag to true after loading
+        self.executor.current_line = 0
+        self.executor.program_counter = 0 # program counteri sıfırladık
+        self.pc_update_callback(0) # ui pc degeri güncellendi
       
     def _run_button_action(self):
         self.memory = Memory(self.data_memory_base, self.data_memory_size)  # Clear data memory with 512 byte size

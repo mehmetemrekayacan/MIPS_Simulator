@@ -19,12 +19,26 @@ class Executor:
         self.instructions = instructions
 
     def execute_instruction(self, instruction: dict):
-        line = instruction["source"]
-        address = instruction["address"]
-        parts = [part.strip() for part in line.replace(",", " ").split()]
-        command = parts[0]
         
-        self.pc_update_callback(self.program_counter) # changed to current program counter
+        while True:
+          line = instruction["source"]
+          address = instruction["address"]
+          parts = [part.strip() for part in line.replace(",", " ").split()]
+          command = parts[0]
+          
+          # Check if the command is a label (ends with :)
+          if command.endswith(":"):
+              self.program_counter += 4
+              self.pc_update_callback(self.program_counter)
+              self.current_line += 1
+              if self.current_line < len(self.instructions):
+                  instruction = self.instructions[self.current_line]
+                  continue
+              else:
+                  return
+          break
+        
+        self.pc_update_callback(self.program_counter)
         self.ui_log_callback(f"Executing at {address}: {line}")
 
         handler = self._get_instruction_handler(command)
@@ -37,7 +51,7 @@ class Executor:
         else:
             self.ui_log_callback(f"Unsupported instruction: {command}")
 
-        self.program_counter += 4  # Now it increment after the instruction is executed.
+        self.program_counter += 4
         self.pc_update_callback(self.program_counter)
         self.current_line += 1
     

@@ -41,20 +41,24 @@ class Parser:
     def parse_text_section(self, lines: List[str]) -> List[dict]:
         instructions = []
         address = 0x00400000
+        
+        text_start = next((i for i, line in enumerate(lines) if line.strip() == ".text"), None)
 
-        try:
-          main_start = next((i for i, line in enumerate(lines) if line.strip() == "main:"), 0)
-            
-          for line in lines[main_start+1:]:
-              line = line.strip()
-              if not line or line.startswith(('.', ':')):
+        if text_start is None:
+            main_start = 0
+        else:
+            main_start = next((i for i, line in enumerate(lines[text_start+1:], start=text_start+1) if line.strip() == "main:"), text_start+1)
+        
+        for line in lines[main_start:]:
+            line = line.strip()
+            if not line or line.startswith(('.', ':')):
                 continue
-              if '#' in line:
-                  line = line.split('#')[0].strip()
-              
-              if line:
-                  parts = [part.strip() for part in line.replace(",", " ").split()]
-                  for i, part in enumerate(parts):
+            if '#' in line:
+                line = line.split('#')[0].strip()
+                
+            if line:
+                parts = [part.strip() for part in line.replace(",", " ").split()]
+                for i, part in enumerate(parts):
                     if part.lower().startswith("0x") or part.lower().startswith("-0x") or part.startswith("-") and not part[1:].isalpha():
                         try:
                             if part.lower().startswith("0x") or part.lower().startswith("-0x"):
@@ -63,14 +67,12 @@ class Parser:
                                 parts[i] = int(part)
                         except ValueError:
                             pass
-                  instructions.append({
-                      "address": f"0x{address:08X}",
-                      "source": " ".join(str(part) for part in parts)
-                  })
-                  address += 4
-          return instructions
-        except Exception:
-            return []
+                instructions.append({
+                    "address": f"0x{address:08X}",
+                    "source": " ".join(str(part) for part in parts)
+                })
+                address += 4
+        return instructions
 
     def map_labels(self, instructions: List[str]) -> Dict[str, int]:
         labels = {}
