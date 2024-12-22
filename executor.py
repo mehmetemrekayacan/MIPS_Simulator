@@ -23,9 +23,8 @@ class Executor:
         address = instruction["address"]
         parts = [part.strip() for part in line.replace(",", " ").split()]
         command = parts[0]
-
-        self.program_counter += 4
-        self.pc_update_callback(self.program_counter)
+        
+        self.pc_update_callback(self.program_counter) # changed to current program counter
         self.ui_log_callback(f"Executing at {address}: {line}")
 
         handler = self._get_instruction_handler(command)
@@ -38,6 +37,8 @@ class Executor:
         else:
             self.ui_log_callback(f"Unsupported instruction: {command}")
 
+        self.program_counter += 4  # Now it increment after the instruction is executed.
+        self.pc_update_callback(self.program_counter)
         self.current_line += 1
     
     def _get_instruction_handler(self, command):
@@ -185,7 +186,7 @@ class Executor:
             self.pc_update_callback(self.program_counter)
             return f"Jumping to {label} (PC={self.program_counter})"
         elif command == "jal":
-            self.commands.update_register_value("$ra", self.program_counter + 4)
+            self.commands.update_register_value("$ra", self.program_counter + 4) # güncellendi + 4 eklendi
             self.program_counter = self.labels[label] * 4
             self.current_line = self.labels[label]
             self.pc_update_callback(self.program_counter)
@@ -210,9 +211,10 @@ class Executor:
       
       target_line = return_address // 4
       
-      self.program_counter = return_address
+      #  Important :  We don't want to advance the pc on a jump instruction
+      self.program_counter = return_address 
       self.current_line = target_line
       self.pc_update_callback(self.program_counter)
       
       self.ui_log_callback(f"Jumping to line {target_line} (PC={self.program_counter})")
-      return f"Jumping to line {target_line} (PC={self.program_counter})"
+      return f"Jumping to line {target_line} (PC={self.program_counter})".data
