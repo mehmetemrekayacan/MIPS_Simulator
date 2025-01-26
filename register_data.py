@@ -1,36 +1,39 @@
 #register_data.py
+from typing import List, Dict, TypedDict
 
-register = [
-    {"name": "$zero", "number": 0, "value": "0x00000000"},
-    {"name": "$at", "number": 1, "value": "0x00000000"},
-    {"name": "$v0", "number": 2, "value": "0x00000000"},
-    {"name": "$v1", "number": 3, "value": "0x00000000"},
-    {"name": "$a0", "number": 4, "value": "0x00000000"},
-    {"name": "$a1", "number": 5, "value": "0x00000000"},
-    {"name": "$a2", "number": 6, "value": "0x00000000"},
-    {"name": "$a3", "number": 7, "value": "0x00000000"},
-    {"name": "$t0", "number": 8, "value": "0x00000000"},
-    {"name": "$t1", "number": 9, "value": "0x00000000"},
-    {"name": "$t2", "number": 10, "value": "0x00000000"},
-    {"name": "$t3", "number": 11, "value": "0x00000000"},
-    {"name": "$t4", "number": 12, "value": "0x00000000"},
-    {"name": "$t5", "number": 13, "value": "0x00000000"},
-    {"name": "$t6", "number": 14, "value": "0x00000000"},
-    {"name": "$t7", "number": 15, "value": "0x00000000"},
-    {"name": "$s0", "number": 16, "value": "0x00000000"},
-    {"name": "$s1", "number": 17, "value": "0x00000000"},
-    {"name": "$s2", "number": 18, "value": "0x00000000"},
-    {"name": "$s3", "number": 19, "value": "0x00000000"},
-    {"name": "$s4", "number": 20, "value": "0x00000000"},
-    {"name": "$s5", "number": 21, "value": "0x00000000"},
-    {"name": "$s6", "number": 22, "value": "0x00000000"},
-    {"name": "$s7", "number": 23, "value": "0x00000000"},
-    {"name": "$t8", "number": 24, "value": "0x00000000"},
-    {"name": "$t9", "number": 25, "value": "0x00000000"},
-    {"name": "$k0", "number": 26, "value": "0x00000000"},
-    {"name": "$k1", "number": 27, "value": "0x00000000"},
-    {"name": "$gp", "number": 28, "value": "0x00000000"},
-    {"name": "$sp", "number": 29, "value": "0x00000000"},
-    {"name": "$fp", "number": 30, "value": "0x00000000"},
-    {"name": "$ra", "number": 31, "value": "0x00000000"},
-]
+class Register(TypedDict):
+    name: str
+    number: int
+    value: str
+
+class MIPSRegisters:
+    # Register types
+    ZERO_REG = "$zero"
+    RETURN_ADDR_REG = "$ra"
+    TEMP_REGS = ["$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$t8", "$t9"]
+    SAVED_REGS = ["$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7"]
+    
+    @staticmethod
+    def create_register(name: str, number: int) -> Register:
+        return {
+            "name": name,
+            "number": number,
+            "value": "0x00000000"
+        }
+
+    @classmethod
+    def get_registers(cls) -> List[Register]:
+        register_definitions = [
+            ("$zero", 0), ("$at", 1),
+            ("$v0", 2), ("$v1", 3),
+            ("$a0", 4), ("$a1", 5), ("$a2", 6), ("$a3", 7),
+            *[(f"$t{i}", i+8) for i in range(8)],
+            *[(f"$s{i}", i+16) for i in range(8)],
+            ("$t8", 24), ("$t9", 25),
+            ("$k0", 26), ("$k1", 27),
+            ("$gp", 28), ("$sp", 29), ("$fp", 30), ("$ra", 31)
+        ]
+        
+        return [cls.create_register(name, number) for name, number in register_definitions]
+
+register = MIPSRegisters.get_registers()

@@ -1,36 +1,38 @@
 # main.py
 import tkinter as tk
-from ui_elements import UIElements
-from mips_commands import MIPSCommands
-from parser import Parser
-from memory import Memory
-from executor import Executor
-from converter import Converter
+from ui_elements import MIPSUI
+from mips_commands import MIPSProcessor
+from parser import MIPSParser
+from memory import MIPSMemory
+from executor import MIPSExecutor
+from converter import MIPSConverter
 
-class MIPSIDE:
+class MIPSSimulator:
     DATA_SECTION_PROCESSED = "Data section processed. Ready to step through text segment."
     TEXT_SECTION_LOADED = "Loaded instructions. Ready to step through."
     NO_INSTRUCTIONS_TO_EXECUTE = "No more instructions to execute."
     NO_CODE_LOADED = "No code loaded."
     MIPS_CONVERTED = "MIPS code converted to machine code."
+    WORD_SIZE = 4  # 4 bytes per word
+    MEMORY_SIZE = 512  # 512 bytes
 
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("MIPS IDE - Python")
+        self.root.title("MIPS Simulator")
         self.root.geometry("1200x1100")
 
         self.data_memory_base = 0x10010000
-        self.data_memory_size = 512 // 4 # 512 Bytes (Data Memory) / 4 Bytes (word)
-        self.instruction_memory_size = 512 // 4 # 512 Bytes (Instruction Memory) / 4 Bytes (word)
-        self.memory = Memory(self.data_memory_base, self.data_memory_size)
-        self.parser = Parser()
-        self.ui = UIElements(root, self.data_memory_base, self._update_program_counter)
-        self.commands = MIPSCommands(self.ui.get_register_tree())
+        self.data_memory_size = self.MEMORY_SIZE // self.WORD_SIZE
+        self.instruction_memory_size = self.MEMORY_SIZE // self.WORD_SIZE
+        self.memory = MIPSMemory(self.data_memory_base, self.data_memory_size)
+        self.parser = MIPSParser()
+        self.ui = MIPSUI(root, self.data_memory_base, self._update_program_counter)
+        self.processor = MIPSProcessor(self.ui.get_register_tree())
         self.executor = None
         self.instructions = []
         self.labels = {}
         self.text_section_loaded = False
-        self.converter = Converter()
+        self.converter = MIPSConverter()
 
         self.ui._run_button_action = self._run_button_action
         self.ui._step_button_action = self._step_button_action
@@ -52,8 +54,8 @@ class MIPSIDE:
         self.labels = self.parser.map_labels([instr["source"] for instr in self.instructions])
         self.ui.set_instruction_memory(self.instructions)
         
-        self.executor = Executor(
-            self.commands,
+        self.executor = MIPSExecutor(
+            self.processor,
             self.memory,
             self.labels,
             self._update_program_counter,
@@ -61,19 +63,19 @@ class MIPSIDE:
         )
         
         # set $ra register in here
-        self.commands.update_register_value("$ra", len(self.instructions) * 4)
+        self.processor.update_register_value("$ra", len(self.instructions) * 4)
         self.ui.log_to_console(f"Set $ra to {len(self.instructions) * 4}")
         
         self.ui.log_to_console(self.TEXT_SECTION_LOADED)
         self.executor.set_instructions(self.instructions)
-        self.text_section_loaded = True # Set the flag to true after loading
+        self.text_section_loaded = True
         self.executor.current_line = 0
-        self.executor.program_counter = 0 # program counteri sıfırladık
-        self.pc_update_callback(0) # ui pc degeri güncellendi
+        self.executor.program_counter = 0
+        self._update_program_counter(0)
       
     def _run_button_action(self):
-        self.memory = Memory(self.data_memory_base, self.data_memory_size)  # Clear data memory with 512 byte size
-        self.commands.clear_registers() # Clear registers
+        self.memory = MIPSMemory(self.data_memory_base, self.data_memory_size)  # Clear data memory with 512 byte size
+        self.processor.clear_registers() # Clear registers
         self._load_sections()
         self.text_section_loaded = True # set the flag to true after loading
 
@@ -111,5 +113,5 @@ class MIPSIDE:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    MIPSIDE(root)
+    MIPSSimulator(root)
     root.mainloop()

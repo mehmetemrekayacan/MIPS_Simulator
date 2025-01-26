@@ -4,9 +4,23 @@ import tkinter.ttk as ttk
 from typing import List
 from register_data import register
 
-class UIElements:
+class MIPSUI:
     def __init__(self, root: tk.Tk, data_memory_base: int, program_counter_callback):
         self.root = root
+        # Set theme colors with new color scheme
+        self.COLORS = {
+            'bg_dark': '#222831',    # Darkest background
+            'bg_light': '#393E46',   # Dark gray
+            'accent': '#00ADB5',     # Cyan/Teal
+            'text': '#EEEEEE',       # Light gray
+            'success': '#00ADB5',    # Cyan/Teal
+            'warning': '#00ADB5',    # Cyan/Teal
+            'error': '#00ADB5'       # Cyan/Teal
+        }
+        
+        # Configure root window
+        self.root.configure(bg=self.COLORS['bg_dark'])
+        
         self.data_memory_base = data_memory_base
         self.program_counter_callback = program_counter_callback
         self.data_memory_values = [0] * (512 // 4)  # Initialize for 512 bytes / 4 bytes per word
@@ -19,158 +33,269 @@ class UIElements:
         self._update_line_numbers()
 
     def _create_widgets(self):
-        # Create a main frame for the entire UI to manage the layout better
-        main_frame = tk.Frame(self.root)
-        main_frame.pack(fill="both", expand=True)  # Allow the main frame to expand
+        # Main frame styling
+        self.main_frame = tk.Frame(self.root, bg=self.COLORS['bg_dark'])
+        self.main_frame.pack(fill="both", expand=True)
 
-        # Top Frame for buttons and pc_label
-        top_frame = tk.Frame(main_frame)
-        top_frame.pack(side="top", fill="x", pady=5) # Add some padding for better separation
+        # Top frame for buttons and PC
+        top_frame = tk.Frame(self.main_frame, bg=self.COLORS['bg_dark'])
+        top_frame.pack(side="top", fill="x", pady=(10,5))  # Üstten 10px, alttan 5px padding
 
-        #Buttons Frame
-        btn_frame = tk.Frame(top_frame)
-        btn_frame.pack(side='left', fill='x')
+        # Content frame - ana içerik için
+        content_frame = tk.Frame(self.main_frame, bg=self.COLORS['bg_dark'])
+        content_frame.pack(fill="both", expand=True, pady=10)  # Üst ve alttan padding
 
-        tk.Button(btn_frame, text="Clear", command=self._clear_registers).pack(side='left', padx=5)
-        tk.Button(btn_frame, text="Run", command=lambda: self._run_button_action()).pack(side='left', padx=5)
-        tk.Button(btn_frame, text="Step", command=lambda: self._step_button_action()).pack(side='left', padx=5)
-        tk.Button(btn_frame, text="Convert Machine Code", command=lambda: self._convert_button_action()).pack(side='left', padx=5)
+        # Sol taraf (editor ve console) için frame
+        left_section = tk.Frame(content_frame, bg=self.COLORS['bg_dark'], width=350)  # 400px'den 350px'e düşür
+        left_section.pack(side="left", fill="both", expand=True, padx=(5,15))  # Sağ padding arttır
+        left_section.pack_propagate(False)  # Boyutu sabitle
 
-         # PC Counter Label
-        self.pc_label = tk.Label(top_frame, text="PC: 0x00000000", font=("Arial", 12), anchor="e")
-        self.pc_label.pack(side="right", padx=5)
+        # Editor frame
+        self.edit_frame = tk.Frame(left_section, bg=self.COLORS['bg_light'], height=300)  # Sabit yükseklik
+        self.edit_frame.pack(fill="both", expand=True, pady=(0,10))
+        self.edit_frame.pack_propagate(False)  # Boyutu sabitle
 
-        # Create a frame for the Assembly Code, Console, IM, and DM areas
-        left_frame = tk.Frame(main_frame)
-        left_frame.pack(side="left", fill="both", expand=True)
+        # Console frame
+        self.console_frame = tk.Frame(left_section, bg=self.COLORS['bg_light'], height=180)  # 120'den 180'e çıkar
+        self.console_frame.pack(fill="x", expand=False, pady=(0,5))
+        self.console_frame.pack_propagate(False)
 
-        # Assembly Code Frame (Reduced width)
-        self.edit_frame = tk.Frame(left_frame, relief='solid', borderwidth=1)
-        self.edit_frame.pack(side="top", fill="both", expand=True, padx=5, pady=5, ipadx=100) # Added ipadx to reduce width
+        # Sağ üst kısım için frame
+        right_top_section = tk.Frame(content_frame, bg=self.COLORS['bg_dark'])
+        right_top_section.pack(side="right", fill="y", padx=15)  # padding'i 10'dan 15'e çıkar
+
+        # Machine Code ve Register frame'leri arasına padding
+        self.machine_code_frame = tk.Frame(right_top_section, bg=self.COLORS['bg_light'])
+        self.machine_code_frame.pack(side="left", fill="both", padx=(0,5))  # Sağ padding
+
+        self.register_frame = tk.Frame(right_top_section, bg=self.COLORS['bg_light'])
+        self.register_frame.pack(side="right", fill="both", padx=(5,0))  # Sol padding
+
+        # Alt kısım için frame
+        bottom_section = tk.Frame(self.main_frame, bg=self.COLORS['bg_dark'])
+        bottom_section.pack(side="bottom", fill="x", pady=10)  # Üst ve alttan padding
+
+        # Instruction Memory ve Data Memory arasına padding
+        self.instruction_frame = tk.Frame(bottom_section, bg=self.COLORS['bg_light'])
+        self.instruction_frame.pack(fill="x", pady=(0,5))  # Alt padding
+
+        self.data_frame = tk.Frame(bottom_section, bg=self.COLORS['bg_light'])
+        self.data_frame.pack(fill="x", pady=(5,0))  # Üst padding
+
+        # Terminal title
+        tk.Label(
+            self.console_frame,
+            text="Terminal",
+            font=("Arial", 11, "bold"),
+            bg=self.COLORS['bg_light'],
+            fg=self.COLORS['text']
+        ).pack(anchor="w", padx=5, pady=2)
+
+        # Console gradient frame
+        console_gradient = tk.Canvas(
+            self.console_frame,
+            bg=self.COLORS['bg_dark'],
+            highlightthickness=0,
+            height=8
+        )
+        console_gradient.pack(fill='x', padx=5)
+
+        # Create gradient effect
+        for i in range(8):
+            color = self._interpolate_color(
+                self.COLORS['bg_dark'],
+                self.COLORS['bg_light'],
+                i/8
+            )
+            console_gradient.create_line(0, i, 10000, i, fill=color)
         
-        self.line_numbers = tk.Text(self.edit_frame, width=4, padx=3, 
-                                    takefocus=0, border=0,
-                                    background='lightgray', state='disabled')
+        # Console output
+        self.console_output = tk.Text(
+            self.console_frame, 
+            height=8,
+            bg=self.COLORS['bg_dark'],
+            fg=self.COLORS['success'],
+            font=('Consolas', 10),
+            padx=10,
+            pady=5
+        )
+        self.console_output.pack(fill='both', expand=True, padx=5, pady=(0,5))
+
+        # Add labels for each section
+        register_title_frame = tk.Frame(self.register_frame, bg=self.COLORS['bg_light'])
+        register_title_frame.pack(fill='x', pady=(2,0))
+        tk.Label(
+            register_title_frame,
+            text="Registers",
+            font=("Arial", 11, "bold"),
+            bg=self.COLORS['bg_light'],
+            fg=self.COLORS['text']
+        ).pack(anchor="w", padx=5, pady=2)
+
+        machine_code_title_frame = tk.Frame(self.machine_code_frame, bg=self.COLORS['bg_light'])
+        machine_code_title_frame.pack(fill='x', pady=(2,0))
+        tk.Label(
+            machine_code_title_frame,
+            text="Machine Code",
+            font=("Arial", 11, "bold"),
+            bg=self.COLORS['bg_light'],
+            fg=self.COLORS['text']
+        ).pack(anchor="w", padx=5, pady=2)
+
+        instruction_title_frame = tk.Frame(self.instruction_frame, bg=self.COLORS['bg_light'])
+        instruction_title_frame.pack(fill='x', pady=(2,0))
+        tk.Label(
+            instruction_title_frame,
+            text="Instruction Memory",
+            font=("Arial", 11, "bold"),
+            bg=self.COLORS['bg_light'],
+            fg=self.COLORS['text']
+        ).pack(anchor="w", padx=5, pady=2)
+
+        data_title_frame = tk.Frame(self.data_frame, bg=self.COLORS['bg_light'])
+        data_title_frame.pack(fill='x', pady=(2,0))
+        tk.Label(
+            data_title_frame,
+            text="Data Memory",
+            font=("Arial", 11, "bold"),
+            bg=self.COLORS['bg_light'],
+            fg=self.COLORS['text']
+        ).pack(anchor="w", padx=5, pady=2)
+
+        # Button styling
+        button_style = {
+            'bg': self.COLORS['accent'],
+            'fg': self.COLORS['bg_dark'],
+            'font': ('Arial', 10, 'bold'),
+            'width': 12,
+            'relief': 'flat',
+            'padx': 10,
+            'pady': 5
+        }
+
+        tk.Button(top_frame, text="Clear", command=self._clear_registers, **button_style).pack(side='left', padx=5)
+        tk.Button(top_frame, text="Run", command=lambda: self._run_button_action(), **button_style).pack(side='left', padx=5)
+        tk.Button(top_frame, text="Step", command=lambda: self._step_button_action(), **button_style).pack(side='left', padx=5)
+        tk.Button(top_frame, text="Convert", command=lambda: self._convert_button_action(), **button_style).pack(side='left', padx=5)
+
+        # PC Counter Label styling
+        self.pc_label = tk.Label(
+            top_frame, 
+            text="PC: 0x00000000",
+            font=("Consolas", 12, "bold"),
+            fg=self.COLORS['accent'],
+            bg=self.COLORS['bg_dark']
+        )
+        self.pc_label.pack(side="right", padx=15)
+
+        # Line numbers styling
+        self.line_numbers = tk.Text(
+            self.edit_frame,
+            width=4,
+            padx=5,
+            pady=5,
+            takefocus=0,
+            border=0,
+            bg=self.COLORS['bg_light'],
+            fg=self.COLORS['text'],
+            font=('Consolas', 11)
+        )
         self.line_numbers.pack(side='left', fill='y')
 
-        self.scrollbar = tk.Scrollbar(
-            self.edit_frame, 
-            command=lambda *args: (
-                self.edit_text.yview(*args), 
-                self.line_numbers.yview(*args)
-            )
-        )
-        self.scrollbar.pack(side='right', fill='y')
-
+        # Editor text styling
         self.edit_text = tk.Text(
             self.edit_frame, 
             wrap='none', 
-            yscrollcommand=self.scrollbar.set,
-            undo=True
+            undo=True,
+            bg=self.COLORS['bg_dark'],
+            fg=self.COLORS['text'],
+            insertbackground=self.COLORS['text'],
+            font=('Consolas', 11),
+            pady=5,
+            padx=5
         )
-        self.edit_text.pack(side='right', fill='both', expand=True)
+        self.edit_text.pack(side='left', fill='both', expand=True)
 
         self.edit_text.bind('<KeyRelease>', self._update_line_numbers)
         self.edit_text.bind("<MouseWheel>", self._on_mouse_wheel)
         self.edit_text.bind("<Control-z>", self._undo)
         self.edit_text.bind("<Control-y>", self._redo)
         
-        # Console Frame (Reduced width)
-        self.console_frame = tk.Frame(left_frame, relief='solid', borderwidth=1)
-        self.console_frame.pack(side="top", fill="both", padx=5, pady=5, ipadx=100) # Added ipadx to reduce width
-
-        self.console_output = tk.Text(
-            self.console_frame, 
-            height=8, 
-            bg='black', 
-            fg='white'
-        )
-        self.console_output.pack(fill='both', expand=True)
-
-
-        #Instruction Memory Frame (Reduced Height)
-        self.instruction_frame = tk.Frame(left_frame, relief='solid', borderwidth=1, bg='lightblue')
-        self.instruction_frame.pack(side="top", fill="both", padx=5, pady=5)
-
-        tk.Label(self.instruction_frame, text="Instruction Memory (Text Segment)", font=("Arial", 12), bg='lightblue').pack(anchor="w")
-
-        columns = ("Address", "Source Code")
-        self.instruction_memory_tree = ttk.Treeview(
-            self.instruction_frame, 
-            columns=columns, 
-            show='headings'
-        )
-
-        for col in columns:
-            self.instruction_memory_tree.heading(col, text=col)
-            self.instruction_memory_tree.column(col, width=200, anchor='center')
-
-        self.instruction_memory_tree.pack(fill="both", expand=True)
-
-        # Data Frame
-        self.data_frame = tk.Frame(left_frame, relief='solid', borderwidth=1, bg='lightgreen')
-        self.data_frame.pack(side="top", fill="both", padx=5, pady=5)
-
-        tk.Label(self.data_frame, text="Data Memory (Data Segment)", font=("Arial", 12), bg='lightgreen').pack(anchor="w")
-
-        columns = ["Address"] + [f"Value(+{i*4})" for i in range(16)]
+        # Treeview style configuration
+        style = ttk.Style()
         
-        self.data_memory_tree = ttk.Treeview(
-            self.data_frame, 
-            columns=columns, 
-            show='headings'
+        # Configure all frames to use bg_dark
+        style.configure('TFrame', background=self.COLORS['bg_dark'])
+        
+        # Configure Treeview and its components
+        style.configure(
+            "Treeview",
+            background=self.COLORS['bg_dark'],
+            foreground=self.COLORS['text'],
+            fieldbackground=self.COLORS['bg_dark'],
+            borderwidth=0
+        )
+        
+        style.configure(
+            "Treeview.Heading",
+            background=self.COLORS['accent'],
+            foreground=self.COLORS['bg_dark'],
+            relief='flat',
+            borderwidth=0,
+            font=('Arial', 10, 'bold')
+        )
+        
+        # Remove Treeview borders
+        style.layout("Treeview", [
+            ('Treeview.treearea', {'sticky': 'nswe'})
+        ])
+
+        # Configure selection color
+        style.map('Treeview',
+            background=[('selected', '#00ADB5')],
+            foreground=[('selected', '#EEEEEE')]
         )
 
-        for col in columns:
-            self.data_memory_tree.heading(col, text=col)
-            self.data_memory_tree.column(col, width=70, anchor='center')
-
-        addresses = [f"0x{self.data_memory_base + (i*64):08X}" for i in range(8)]
-        initial_values = ["0x00000000"] * 16
-        
-        for addr in addresses:
-            self.data_memory_tree.insert("", "end", values=[addr] + initial_values)
-
-        self.data_memory_tree.pack(fill="both", expand=True)
-
-        # Create a frame for the Machine Code and Register areas
-        right_frame = tk.Frame(main_frame)
-        right_frame.pack(side="right", fill="both", expand=True)
-        
-        # Machine Code Frame (Moved to Left of Register, Reduced Height)
-        self.machine_code_frame = tk.Frame(right_frame, relief='solid', borderwidth=1, bg='lightyellow')
-        self.machine_code_frame.pack(side="left", fill="x", padx=5, pady=5, ipady=50, anchor="n") # ipady added, anchor set to 'n'
-
-        tk.Label(self.machine_code_frame, text="Machine Code", font=("Arial", 12), bg='lightyellow').pack(anchor="w")
-
-        columns = ("Instruction", "Machine Code")
-        self.machine_code_tree = ttk.Treeview(
-            self.machine_code_frame, 
-            columns=columns, 
-            show='headings'
+        # Custom style for all Treeviews
+        style.configure(
+            "Custom.Treeview",
+            background=self.COLORS['bg_dark'],
+            foreground=self.COLORS['text'],
+            fieldbackground=self.COLORS['bg_dark'],
+            borderwidth=0,
+            font=('Consolas', 10)
         )
 
-        for col in columns:
-            self.machine_code_tree.heading(col, text=col)
-            self.machine_code_tree.column(col, width=200, anchor='center')
+        # Update frame configurations
+        for frame in [self.register_frame, self.machine_code_frame, 
+                     self.instruction_frame, self.data_frame]:
+            frame.configure(
+                bg=self.COLORS['bg_dark'],
+                highlightthickness=0,  # Remove highlight border
+                borderwidth=0  # Remove border
+            )
 
-        self.machine_code_tree.pack(fill="both", expand=True)
+        # Common Treeview configurations
+        treeview_style = {
+            'show': 'headings',
+            'selectmode': 'browse'
+        }
 
-
-        # Register Frame (Reduced Height)
-        self.register_frame = tk.Frame(right_frame, relief='solid', borderwidth=1)
-        self.register_frame.pack(side="left", fill='x', padx=5, pady=5, ipady=220, anchor="n") # ipady added, anchor set to 'n'
-
-
+        # Register TreeView
         columns = ("Name", "Number", "Value")
-        self.tree = ttk.Treeview(self.register_frame, columns=columns, show='headings')
+        self.tree = ttk.Treeview(
+            self.register_frame,
+            columns=columns,
+            height=8,
+            **treeview_style
+        )
 
-        for col in columns:
+        for col, width in zip(columns, [60, 60, 80]):  # Sütun genişliklerini küçült
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=80, anchor='center')
+            self.tree.column(col, width=width, anchor='center')
 
-        self.tree.tag_configure('evenrow', background='lightgray')
-        self.tree.tag_configure('oddrow', background='white')
+        self.tree.tag_configure('evenrow', background=self.COLORS['bg_light'])
+        self.tree.tag_configure('oddrow', background=self.COLORS['bg_dark'])
 
         for index, reg in enumerate(register):
             tag = 'evenrow' if index % 2 == 0 else 'oddrow'
@@ -180,7 +305,97 @@ class UIElements:
                 reg["value"]
             ), tags=(tag,))
 
-        self.tree.pack(fill='both', expand=True)
+        self.tree.pack(fill='both', expand=True, padx=5, pady=5)
+
+        # Instruction Memory TreeView
+        columns = ("Address", "Source Code")
+        self.instruction_memory_tree = ttk.Treeview(
+            self.instruction_frame, 
+            columns=columns, 
+            height=10,
+            **treeview_style
+        )
+
+        for col in columns:
+            self.instruction_memory_tree.heading(col, text=col)
+            self.instruction_memory_tree.column(col, width=200, anchor='center')
+
+        self.instruction_memory_tree.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Data Memory TreeView
+        columns = ["Address"] + [f"Value(+{i*4})" for i in range(16)]
+        self.data_memory_tree = ttk.Treeview(
+            self.data_frame, 
+            columns=columns, 
+            height=10,
+            **treeview_style
+        )
+
+        for col in columns:
+            self.data_memory_tree.heading(col, text=col)
+            self.data_memory_tree.column(col, width=70, anchor='center')
+
+        self.data_memory_tree.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Machine Code TreeView
+        columns = ("Instruction", "Machine Code")
+        self.machine_code_tree = ttk.Treeview(
+            self.machine_code_frame, 
+            columns=columns, 
+            height=10,
+            **treeview_style
+        )
+
+        for col, width in zip(columns, [150, 200]):  # 100,100'den 150,200'e çıkarıldı
+            self.machine_code_tree.heading(col, text=col)
+            self.machine_code_tree.column(col, width=width, anchor='center')
+
+        self.machine_code_tree.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Add highlight tag for register changes
+        self.tree.tag_configure('highlight', 
+            background='#00ADB5',     # Cyan/Teal for highlight
+            foreground='#EEEEEE'      # Light gray text
+        )
+
+        # Update evenrow/oddrow colors
+        self.tree.tag_configure('evenrow', 
+            background=self.COLORS['bg_light'],
+            foreground=self.COLORS['text']
+        )
+        self.tree.tag_configure('oddrow', 
+            background=self.COLORS['bg_dark'],
+            foreground=self.COLORS['text']
+        )
+
+        # Set background color for all treeviews
+        for tree in [self.tree, self.instruction_memory_tree, 
+                     self.data_memory_tree, self.machine_code_tree]:
+            tree.configure(
+                style='Custom.Treeview',
+                height=6,
+                show='headings',
+                selectmode='browse'
+            )
+            
+            # Configure tags for alternating row colors
+            tree.tag_configure('evenrow', 
+                background=self.COLORS['bg_light'],
+                foreground=self.COLORS['text']
+            )
+            tree.tag_configure('oddrow', 
+                background=self.COLORS['bg_dark'],
+                foreground=self.COLORS['text']
+            )
+
+        # Sağ üst kısım için genişlik ayarı
+        self.machine_code_frame.configure(width=370)  # 220'den 370'e çıkarıldı
+        self.register_frame.configure(width=220)      # Bu aynı kalıyor
+        self.machine_code_frame.pack_propagate(False)
+        self.register_frame.pack_propagate(False)
+
+        # Console yükseklik ayarı
+        self.console_frame.pack_propagate(False)  # Console yüksekliğini sabitle
 
     def _update_line_numbers(self, event=None):
         lines = self.edit_text.get('1.0', 'end-1c').split('\n')
@@ -263,6 +478,7 @@ class UIElements:
 
     def log_to_console(self, message):
         self.console_output.insert('end', f"{message}\n")
+        self.console_output.see('end')  # Automatically scroll to the bottom
 
     def set_instruction_memory(self, instructions: List[dict]):
         for item in self.instruction_memory_tree.get_children():
@@ -287,3 +503,17 @@ class UIElements:
           
     def get_register_tree(self) -> ttk.Treeview:
       return self.tree
+
+    def _interpolate_color(self, color1, color2, fraction):
+        """Create a color that is between color1 and color2"""
+        def hex_to_rgb(color):
+            return tuple(int(color[i:i+2], 16) for i in (1, 3, 5))
+        
+        def rgb_to_hex(rgb):
+            return f'#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}'
+        
+        c1 = hex_to_rgb(color1)
+        c2 = hex_to_rgb(color2)
+        
+        rgb = tuple(int(c1[i] + (c2[i] - c1[i]) * fraction) for i in range(3))
+        return rgb_to_hex(rgb)

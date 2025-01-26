@@ -1,121 +1,129 @@
 # mips_commands.py
 import tkinter.ttk as ttk
-from typing import Optional, Union
+from typing import Optional, Union, Callable, Dict
 
-class MIPSCommands:
+class MIPSProcessor:
     def __init__(self, tree: ttk.Treeview):
         self.tree = tree
+        self.last_highlighted_item = None  # Track last highlighted item
+        self._operation_map: Dict[str, Callable[[int, int], int]] = {
+            'add': lambda x, y: x + y,
+            'sub': lambda x, y: x - y,
+            'and': lambda x, y: x & y,
+            'or': lambda x, y: x | y,
+            'xor': lambda x, y: x ^ y,
+            'sll': lambda x, y: x << y,
+            'srl': lambda x, y: x >> y,
+            'andi': lambda x, y: x & y,
+            'ori': lambda x, y: x | y,
+            'bkm':lambda x,y:(x*2)*(y*-1)
+        }
 
     def _find_register_item(self, register_name: str) -> Optional[str]:
+        """Find register item in treeview."""
         for item in self.tree.get_children():
-            if self.tree.item(item, 'values')[0] == register_name:
+            if self.tree.item(item)['values'][0] == register_name:
                 return item
         return None
 
-    def get_register_value(self, register_name):
+    def get_register_value(self, register_name: str) -> int:
+        """Get register value as integer."""
         item = self._find_register_item(register_name)
-        if item:
-            hex_value = self.tree.item(item, 'values')[2]
-            try:
-                if hex_value.startswith('-0x'):
-                    return int(hex_value, 16)
-                return int(hex_value, 16)
-            except ValueError:
-                return 0
-        return 0
+        if not item:
+            raise ValueError(f"Register {register_name} not found")
+            
+        hex_value = self.tree.item(item)['values'][2]
+        try:
+            return int(hex_value, 16) if not hex_value.startswith('-') else -int(hex_value[1:], 16)
+        except ValueError:
+            return 0
 
-    def update_register_value(self, register_name: str, new_value: Union[int, str]):
+    def update_register_value(self, register_name: str, new_value: Union[int, str]) -> None:
+        """Update register with new value and highlight the change."""
         item = self._find_register_item(register_name)
-        if item:
-            if isinstance(new_value, int):
-                hex_value = f"0x{new_value & 0xFFFFFFFF:08X}"
-            else:
-                hex_value = f"0x{int(new_value, 16) & 0xFFFFFFFF:08X}"
-            self.tree.set(item, column="Value", value=hex_value)
+        if not item:
+            raise ValueError(f"Register {register_name} not found")
+            
+        if register_name == "$zero":
+            return  # $zero register cannot be modified
 
-    def clear_registers(self):
+        # Remove previous highlight if exists
+        if self.last_highlighted_item:
+            self.tree.item(self.last_highlighted_item, tags=())
+
+        value = (int(new_value, 16) if isinstance(new_value, str) else new_value) & 0xFFFFFFFF
+        hex_value = f"0x{value:08X}"
+        self.tree.set(item, column="Value", value=hex_value)
+        
+        # Add highlight to changed register
+        self.tree.item(item, tags=('highlight',))
+        self.last_highlighted_item = item
+        
+        # Ensure the highlighted item is visible
+        self.tree.see(item)
+
+    def clear_registers(self) -> None:
+        """Reset all registers to zero."""
+        # Clear highlight first
+        if self.last_highlighted_item:
+            index = self.tree.index(self.last_highlighted_item)
+            tag = 'evenrow' if index % 2 == 0 else 'oddrow'
+            self.tree.item(self.last_highlighted_item, tags=(tag,))
+            self.last_highlighted_item = None
+
         for item in self.tree.get_children():
-            self.tree.set(item, column="Value", value="0x00000000")
+            register_name = self.tree.item(item)['values'][0]
+            if register_name != "$zero":  # Don't modify $zero
+                self.tree.set(item, column="Value", value="0x00000000")
 
-    def _binary_arithmetic(self, dest: str, src1: str, src2: str, operation):
+    def clear_highlight(self) -> None:
+        """Clear the highlight from the last modified register."""
+        if self.last_highlighted_item:
+            index = self.tree.index(self.last_highlighted_item)
+            tag = 'evenrow' if index % 2 == 0 else 'oddrow'
+            self.tree.item(self.last_highlighted_item, tags=(tag,))
+            self.last_highlighted_item = None
+
+    def execute_arithmetic(self, dest: str, src1: str, src2: str, operation: str) -> None:
+        """Execute arithmetic operations."""
+        if operation not in self._operation_map:
+            raise ValueError(f"Unknown operation: {operation}")
+            
+        val1 = self.get_register_value(src1)
+        val2 = self.get_register_value(src2)
+        result = self._operation_map[operation](val1, val2)
+        self.update_register_value(dest, result)
+
+    def execute_logical(self, dest: str, src1: str, src2: str, operation):
       val1 = self.get_register_value(src1)
       val2 = self.get_register_value(src2)
       result = operation(val1, val2)
       self.update_register_value(dest, result)
 
-    def execute_add_command(self, dest: str, src1: str, src2: str):
-        self._binary_arithmetic(dest, src1, src2, lambda x, y: x + y)
-
-    def execute_sub_command(self, dest: str, src1: str, src2: str):
-        self._binary_arithmetic(dest, src1, src2, lambda x, y: x - y)
-    
-    def execute_and_command(self, dest: str, src1: str, src2: str):
-      self._binary_arithmetic(dest, src1, src2, lambda x, y: x & y)
-
-    def execute_or_command(self, dest: str, src1: str, src2: str):
-      self._binary_arithmetic(dest, src1, src2, lambda x, y: x | y)
-
-    def execute_sll_command(self, dest: str, src1: str, shift_amount: int):
+    def execute_shift(self, dest: str, src1: str, shift_amount: int, operation):
         val1 = self.get_register_value(src1)
-        result = val1 << shift_amount
+        result = operation(val1, shift_amount)
         self.update_register_value(dest, result)
 
-    def execute_srl_command(self, dest: str, src1: str, shift_amount: int):
-        val1 = self.get_register_value(src1)
-        result = val1 >> shift_amount
-        self.update_register_value(dest, result)
-
-    def execute_slt_command(self, dest: str, src1: str, src2: str):
+    def execute_slt(self, dest: str, src1: str, src2: str):
         val1 = self.get_register_value(src1)
         val2 = self.get_register_value(src2)
         result = 1 if val1 < val2 else 0
         self.update_register_value(dest, result)
 
-    def execute_beq_command(self, reg1: str, reg2: str, label: str):
-        val1 = self.get_register_value(reg1)
-        val2 = self.get_register_value(reg2)
-        
-        if val1 == val2:
-            return f"Branching to {label}"
-        return None
-
-    def execute_bne_command(self, reg1: str, reg2: str, label: str):
-        val1 = self.get_register_value(reg1)
-        val2 = self.get_register_value(reg2)
-        
-        if val1 != val2:
-            return f"Branching to {label}"
-        return None
-
-    def execute_j_command(self, label: str):
-        return f"Jumping to {label}"
-
-    def execute_jal_command(self, label: str):
-        self.update_register_value("$ra", self.current_line + 1)
-        return f"Jumping to {label} and storing return address"
-
-    def execute_sw_command(self, src_reg: str, memory_address: str):
-        value = self.get_register_value(src_reg)
-        
-        try:
-            import re
-            match = re.match(r'(-?\d+)\((\$\w+)\)', memory_address)
-            if match:
-                offset = int(match.group(1))
-                base_reg = match.group(2)
-                base_value = self.get_register_value(base_reg)
-                
-                memory_loc = base_value + offset
-                return f"Stored {value} at memory location {memory_loc}"
-            else:
-                return f"Invalid memory address format: {memory_address}"
-        except Exception as e:
-            return f"Error in store word: {str(e)}"
-        
-    def execute_addi_command(self, dest: str, src1: str, immediate: int):
+    def execute_addi(self, dest: str, src1: str, immediate: int):
         val1 = self.get_register_value(src1)
         result = val1 + immediate
         self.update_register_value(dest, result)
 
-    def execute_jr_command(self, register: str):
-        return f"Jumping to address in {register}"
+    def execute_logical_immediate(self, dest: str, src1: str, immediate: int, operation: str) -> None:
+        """Execute logical immediate operations (andi, ori)."""
+        val1 = self.get_register_value(src1)
+        result = self._operation_map[operation](val1, immediate)
+        self.update_register_value(dest, result)
+
+    def execute_bkm(self, dest: str, src1: str, src2: str):
+        val1 = self.get_register_value(src1)
+        val2 = self.get_register_value(src2)
+        result = self._operation_map["bkm"](val1, val2)
+        self.update_register_value(dest, result)

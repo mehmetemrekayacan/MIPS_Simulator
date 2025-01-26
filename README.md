@@ -2,62 +2,77 @@
 
 ## Overview
 
-This is a comprehensive MIPS Assembly Language Simulator built with Python and Tkinter, providing an interactive development environment for MIPS assembly programming. The simulator allows users to write, load, and execute MIPS assembly code with step-by-step execution and real-time register and memory tracking.
+This is a comprehensive MIPS Assembly Language Simulator built with Python and Tkinter, providing an interactive development environment for MIPS assembly programming. The simulator allows users to write, load, and execute MIPS assembly code with step-by-step execution and real-time register and memory tracking. It also includes machine code conversion capabilities.
 
 ## 🌟 Features
 
 ### Code Editor
-- Line numbering
-- Syntax highlighting (basic)
-- Undo/Redo functionality
+
+- Line numbering with synchronized scrolling
+- Basic text editing capabilities (undo, redo, etc.)
 - Scrollable text area
 
 ### Execution Environment
+
 - Step-by-step code execution
 - Real-time program counter tracking
-- Comprehensive instruction support
+- Logging of executed instructions to a console
+- Supports jumping, branching, and return from subroutine calls.
 
 ### Register and Memory Management
-- Interactive register view
-- Data memory tracking
-- Memory address visualization
+
+- Interactive register view with real-time updates
+- Data memory view with address and 16 value columns
+- Data segment visualization and updates
+
+### Machine Code Conversion
+
+- Converts MIPS assembly instructions to their binary machine code equivalents.
+- Displays the results in a structured table alongside the original instruction.
 
 ### Supported Instructions
-- Arithmetic: `add`, `sub`, `mul`, `div`, `addi`
-- Logical: `and`, `or`, `andi`, `ori`
-- Shift: `sll`, `srl`
-- Memory: `lw`, `sw`
-- Comparison: `slt`
-- Control Flow: `beq`, `bne`, `j`, `jal`, `jr`
+
+- **Arithmetic**: `add`, `sub`, `addi`
+- **Logical**: `and`, `or`
+- **Shift**: `sll`, `srl`
+- **Memory**: `lw`, `sw`
+- **Comparison**: `slt`
+- **Control Flow**: `beq`, `bne`, `j`, `jal`, `jr`
 
 ## 🚀 Installation
 
 ### Prerequisites
+
 - Python 3.8+
 - Tkinter (usually comes pre-installed with Python)
 
 ### Clone the Repository
+
 ```bash
 git clone https://github.com/yourusername/mips-simulator.git
 cd mips-simulator
 ```
 
 ### Dependencies
+
 No external dependencies required beyond standard Python libraries.
 
 ## 📋 Usage
 
 ### Running the Simulator
+
 ```bash
-python MIPSIDE.py
+python main.py
 ```
 
 ### Writing MIPS Code
+
 1. Use the text editor to write your MIPS assembly code
 2. Include `.data` and `.text` sections
 3. Define labels for branching and jumping
 
 ### Example Code
+
 ```assembly
 .data
     result: .word 0
@@ -73,41 +88,46 @@ main:
 ## 🕹️ User Interface
 
 ### Left Panel: Code Editor
+
 - Write and edit MIPS assembly code
-- Line numbers for easy reference
+- Line numbers for easy reference that scroll with text
+- Supports undo/redo
+
+### Left Panel: Bottom
+
+- **Console:** Displays execution logs, program counter updates, and step-by-step execution messages
+- **Instruction Memory:** Displays the address and source code of loaded instructions
+- **Data Memory:** Visualizes data segment memory with address and 16 columns for value tracking
 
 ### Right Panel: Registers
-- Shows register names, numbers, and current values
-- Real-time updates during execution
 
-### Bottom Left: Console
-- Execution logs
-- Program counter tracking
-- Step-by-step execution messages
+- Shows register names, numbers, and current values in hex format.
+- Real-time updates during execution.
 
-### Bottom Center: Instruction Memory
-- Displays loaded instructions with addresses
-- Shows current execution state
+### Right Panel: Left
 
-### Bottom Right: Data Memory
-- Visualizes data segment memory
-- Tracks memory address and values
+- **Machine Code:** Displays MIPS code and its machine code representation
 
 ## 🛠️ Control Buttons
 
-- **Clear**: Reset all registers to zero
-- **Run**: Load and prepare code for execution
-- **Step**: Execute one instruction at a time
+- **Clear**: Clears the console, memory and register values
+- **Run**: Loads the code sections, initializes the simulator, and resets PC
+- **Step**: Executes one instruction at a time
+- **Convert Machine Code:** Converts the loaded MIPS assembly code to its machine code equivalent and displays the output.
 
 ## 🚧 Limitations
-- Basic memory simulation
-- No floating-point instruction support
+
+- Basic memory simulation with limited size
+- Supports integer operations only
 - Limited pseudo-instruction handling
+- Address is word-aligned
 
 ## 📄 License
+
 [Choose an appropriate license, e.g., MIT License]
 
 ## 🤝 Contributing
+
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
@@ -115,6 +135,7 @@ main:
 5. Open a Pull Request
 
 ## 📧 Contact
+
 Your Name - emremehmet32@hotmail.com | emremehmet2032@gmail.com
 
 Project Link: [https://github.com/mehmetemrekayacan/MIPS_Simulator](https://github.com/mehmetemrekayacan/MIPS_Simulator)

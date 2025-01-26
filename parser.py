@@ -2,7 +2,7 @@
 from typing import Dict, List
 import re
 
-class Parser:
+class MIPSParser:
     def parse_data_section(self, lines: List[str]) -> Dict[str, int]:
         data_section = {}
         try:

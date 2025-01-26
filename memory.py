@@ -1,77 +1,79 @@
 # memory.py
-from typing import Dict, List
+from typing import Dict, List, Optional
+from dataclasses import dataclass
 
-class Memory:
+@dataclass
+class MemoryConfig:
+    base_address: int
+    size: int
+    word_size: int = 4  # 4 bytes per word
+
+class MemoryError(Exception):
+    """Custom exception for memory-related errors."""
+    pass
+
+class MIPSMemory:
     def __init__(self, base_address: int, size: int):
-        self.base_address = base_address
-        self.memory: List[int] = [0] * size
+        self.config = MemoryConfig(base_address, size)
+        self.memory: List[int] = [0] * (size // self.config.word_size)
         self.data_section: Dict[str, int] = {}
 
-    def read_word(self, address: int) -> int:
-        # Calculate relative address
-        relative_address = address - self.base_address
-        
-        # Check if address is word-aligned
-        if relative_address % 4 != 0:
-            raise ValueError(f"Unaligned memory access at address: {address:08X}")
-            
-        # Convert to array index
-        index = relative_address // 4
-        
-        # Check bounds
-        if 0 <= index < len(self.memory):
-            return self.memory[index]
-        else:
-            # For addresses below base_address, treat as regular memory access
-            if 0 <= address < self.base_address:
-                index = address // 4
-                if 0 <= index < len(self.memory):
-                    return self.memory[index]
-            raise ValueError(f"Memory access out of bounds at address: {address:08X}")
+    def _validate_address(self, address: int) -> None:
+        """Validate memory address."""
+        if address % self.config.word_size != 0:
+            raise MemoryError(f"Unaligned memory access at address: 0x{address:08X}")
 
-    def write_word(self, address: int, value: int):
-        # Calculate relative address
-        relative_address = address - self.base_address
+    def read_word(self, address: int) -> int:
+        """Read a word from memory."""
+        self._validate_address(address)  # Validate alignment first
         
-        # Check if address is word-aligned
-        if relative_address % 4 != 0:
-            raise ValueError(f"Unaligned memory access at address: {address:08X}")
-            
-        # Convert to array index
-        index = relative_address // 4
-        
-        # Check bounds
-        if 0 <= index < len(self.memory):
-            self.memory[index] = value & 0xFFFFFFFF  # Ensure 32-bit value
+        # Check if address is within data memory range
+        if self.config.base_address <= address < self.config.base_address + (len(self.memory) * self.config.word_size):
+            index = (address - self.config.base_address) // self.config.word_size
+            return self.memory[index]
+        elif 0 <= address < self.config.base_address:
+            # Handle absolute memory access below data memory range
+            index = address // self.config.word_size
+            if 0 <= index < len(self.memory):
+                return self.memory[index]
+            else:
+               raise MemoryError(f"Memory access out of bounds at address: 0x{address:08X}")
         else:
-            # For addresses below base_address, treat as regular memory access
-            if 0 <= address < self.base_address:
-                index = address // 4
-                if 0 <= index < len(self.memory):
-                    self.memory[index] = value & 0xFFFFFFFF
-                    return
-            raise ValueError(f"Memory access out of bounds at address: {address:08X}")
+            raise MemoryError(f"Memory access out of bounds at address: 0x{address:08X}")
+            
+    def write_word(self, address: int, value: int):
+         # Validate alignment first
+        self._validate_address(address)  
+        
+        # Check if address is within data memory range
+        if self.config.base_address <= address < self.config.base_address + (len(self.memory) * self.config.word_size):
+            index = (address - self.config.base_address) // self.config.word_size
+            self.memory[index] = value & 0xFFFFFFFF  # Ensure 32-bit value
+        elif 0 <= address < self.config.base_address:
+            # Handle absolute memory access below data memory range
+            index = address // self.config.word_size
+            if 0 <= index < len(self.memory):
+                 self.memory[index] = value & 0xFFFFFFFF
+            else:
+                raise MemoryError(f"Memory access out of bounds at address: 0x{address:08X}")
+        else:
+              raise MemoryError(f"Memory access out of bounds at address: 0x{address:08X}")
+
 
     def is_valid_address(self, address: int) -> bool:
-        # Check if address is within valid ranges
-        relative_address = address - self.base_address
-        
-        # Check if address is word-aligned
-        if relative_address % 4 != 0:
+        """Check if address is a valid memory address."""
+        if address % self.config.word_size != 0:
             return False
-            
-        # Convert to array index
-        index = relative_address // 4
         
-        # Check primary range (relative to base address)
-        if 0 <= index < len(self.memory):
+        # Check if address is within data memory range
+        if self.config.base_address <= address < self.config.base_address + (len(self.memory) * self.config.word_size):
             return True
-            
-        # Check secondary range (absolute addresses below base_address)
-        if 0 <= address < self.base_address:
-            index = address // 4
+        
+        # Check if address is in the absolute range below data memory range
+        if 0 <= address < self.config.base_address:
+            index = address // self.config.word_size
             return 0 <= index < len(self.memory)
-            
+        
         return False
 
     def allocate_data(self, data_section: Dict[str, int]):
