@@ -124,7 +124,7 @@ main:
 
 ## 📄 License
 
-[Choose an appropriate license, e.g., MIT License]
+[MIT License](LICENSE)
 
 ## 🤝 Contributing
 
