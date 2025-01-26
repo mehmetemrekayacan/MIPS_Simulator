@@ -88,13 +88,8 @@ class MIPSExecutor:
             "jr": self._handle_jr,
             # System
             "syscall": self._handle_syscall,
-            "bkm":self._handle_bkm
         }
         return instruction_map.get(command)
-    
-    def _handle_bkm(self, _, parts):
-        dest, src1, src2 = parts
-        self.commands.execute_bkm(dest, src1, src2)
     
     def _handle_r_type_arithmetic(self, command, parts):
         dest, src1, src2 = parts

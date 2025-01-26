@@ -16,7 +16,6 @@ class MIPSProcessor:
             'srl': lambda x, y: x >> y,
             'andi': lambda x, y: x & y,
             'ori': lambda x, y: x | y,
-            'bkm':lambda x,y:(x*2)*(y*-1)
         }
 
     def _find_register_item(self, register_name: str) -> Optional[str]:
@@ -120,10 +119,4 @@ class MIPSProcessor:
         """Execute logical immediate operations (andi, ori)."""
         val1 = self.get_register_value(src1)
         result = self._operation_map[operation](val1, immediate)
-        self.update_register_value(dest, result)
-
-    def execute_bkm(self, dest: str, src1: str, src2: str):
-        val1 = self.get_register_value(src1)
-        val2 = self.get_register_value(src2)
-        result = self._operation_map["bkm"](val1, val2)
         self.update_register_value(dest, result)

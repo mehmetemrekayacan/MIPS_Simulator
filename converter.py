@@ -38,14 +38,14 @@ class MIPSConverter:
             "sll": "000000", "srl": "000010",
             "addi": "001000", "lw": "100011", "sw": "101011", "beq": "000100", 
             "bne": "000101", "j": "000010", "jal": "000011", "slt": "101010", 
-            "jr": "001000","bkm": "000000"
+            "jr": "001000"
         }
         
         self.FUNCTION_MAP = {
             "add": "100000", "sub": "100010", "mul": "011000", "div": "011010",
             "and": "100100", "or": "100101", "xor": "100110",
             "sll": "000000", "srl": "000010",
-            "slt": "101010", "jr": "001000","bkm": "000000"
+            "slt": "101010", "jr": "001000"
         }
 
     def _compile_regex_patterns(self) -> None:
@@ -172,7 +172,7 @@ class MIPSConverter:
 
     def _get_instruction_type(self, command: str) -> str:
         """Determine instruction type (r, i, or j)."""
-        r_type = {'add', 'sub', 'and', 'or', 'xor', 'sll', 'srl', 'slt',"bkm"}
+        r_type = {'add', 'sub', 'and', 'or', 'xor', 'sll', 'srl', 'slt'}
         i_type = {'addi', 'lw', 'sw', 'beq', 'bne', 'li'}
         j_type = {'j', 'jal', 'jr'}
 
